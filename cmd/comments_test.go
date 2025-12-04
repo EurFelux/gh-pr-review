@@ -92,6 +92,40 @@ func TestCommentsReplyCommand(t *testing.T) {
 	var payload map[string]interface{}
 	require.NoError(t, json.Unmarshal(stdout.Bytes(), &payload))
 	assert.Equal(t, float64(99), payload["id"])
+	assert.Equal(t, "ack", payload["body"])
+}
+
+func TestCommentsReplyCommandConcise(t *testing.T) {
+	originalFactory := apiClientFactory
+	defer func() { apiClientFactory = originalFactory }()
+
+	fake := &commandFakeAPI{}
+	fake.restFunc = func(method, path string, params map[string]string, body interface{}, result interface{}) error {
+		switch path {
+		case "repos/octo/demo/pulls/7/comments/5/replies":
+			payload := map[string]interface{}{"id": 101, "body": "ack"}
+			return assignJSON(result, payload)
+		default:
+			return errors.New("unexpected path")
+		}
+	}
+	apiClientFactory = func(host string) ghcli.API { return fake }
+
+	root := newRootCommand()
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	root.SetOut(stdout)
+	root.SetErr(stderr)
+	root.SetArgs([]string{"comments", "reply", "--comment-id", "5", "--body", "ack", "--concise", "octo/demo#7"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Empty(t, stderr.String())
+
+	var payload map[string]interface{}
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &payload))
+	assert.Equal(t, 1, len(payload))
+	assert.Equal(t, float64(101), payload["id"])
 }
 
 func TestCommentsRequiresSelectorOrPR(t *testing.T) {
