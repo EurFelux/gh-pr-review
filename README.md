@@ -1,147 +1,294 @@
 # gh-pr-review
 [![Agyn badge](https://agyn.io/badges/badge_dark.svg)](http://agyn.io)
 
-`gh-pr-review` is a precompiled GitHub CLI extension that streamlines
-pull request review workflows. It adds helpers for listing review comments,
-replying to threads, and managing pending reviews without cloning repositories.
+`gh-pr-review` is a precompiled GitHub CLI extension for high-signal pull
+request reviews. It manages pending GraphQL reviews, surfaces REST identifiers,
+and resolves threads without cloning repositories.
 
-- [Commands](#commands)
-- [Agent usage guide](#agent-usage-guide)
-- [Development](#development)
+- [Quickstart](#quickstart)
+- [Backend policy](#backend-policy)
+- [Installation & upgrade](#installation--upgrade)
+- [Command examples](#command-examples)
+- [Output conventions](#output-conventions)
+- [Additional docs](#additional-docs)
 
-## Installation
+## Quickstart
 
-Install or upgrade directly from GitHub:
+The quickest path from opening a pending review to resolving threads:
+
+1. **Install or upgrade the extension.**
+
+   ```sh
+   gh extension install Agyn-sandbox/gh-pr-review
+   # Update an existing installation
+   gh extension upgrade Agyn-sandbox/gh-pr-review
+   ```
+
+2. **Start a pending review (GraphQL).** Capture the returned `id` (GraphQL
+   node) and optional `database_id`.
+
+   ```sh
+   gh pr-review review --start owner/repo#42
+
+   {
+     "id": "PRR_kwDOAAABbcdEFG12",
+     "state": "PENDING",
+     "database_id": 3531807471,
+     "html_url": "https://github.com/owner/repo/pull/42#pullrequestreview-3531807471"
+   }
+   ```
+
+3. **Add inline comments with the pending review ID (GraphQL).** The
+   `review --add-comment` command fails fast if you supply a numeric ID instead
+   of the required `PRR_…` GraphQL identifier.
+
+   ```sh
+   gh pr-review review --add-comment \
+     --review-id PRR_kwDOAAABbcdEFG12 \
+     --path internal/service.go \
+     --line 42 \
+     --body "nit: use helper" \
+     owner/repo#42
+
+   {
+     "id": "PRRT_kwDOAAABbcdEFG12",
+     "path": "internal/service.go",
+     "is_outdated": false,
+     "line": 42
+   }
+   ```
+
+4. **Locate the numeric review identifier (GraphQL).** `review pending-id`
+   reads GraphQL only; when the authenticated viewer login cannot be resolved,
+   the command errors with guidance to pass `--reviewer`.
+
+   ```sh
+   gh pr-review review pending-id --reviewer octocat owner/repo#42
+
+   {
+     "id": "PRR_kwDOAAABbcdEFG12",
+     "database_id": 3531807471,
+     "state": "PENDING",
+     "html_url": "https://github.com/owner/repo/pull/42#pullrequestreview-3531807471",
+     "user": { "login": "octocat", "id": 6752317 }
+   }
+   ```
+
+5. **Submit the review (REST).** Use the numeric `review-id` returned above.
+   Each event emits the updated review state and timestamps with optional
+   fields omitted when empty.
+
+   ```sh
+   gh pr-review review --submit \
+     --review-id 3531807471 \
+     --event REQUEST_CHANGES \
+     --body "Please add tests" \
+     owner/repo#42
+
+   {
+     "id": "PRR_kwDOAAABbcdEFG12",
+     "state": "REQUEST_CHANGES",
+     "submitted_at": "2024-12-19T18:43:22Z",
+     "database_id": 3531807471,
+     "html_url": "https://github.com/owner/repo/pull/42#pullrequestreview-3531807471"
+   }
+   ```
+
+6. **Inspect and resolve threads (GraphQL).** Array responses are always `[]`
+   when no threads match.
+
+   ```sh
+   gh pr-review threads list --unresolved --mine owner/repo#42
+
+   [
+     {
+       "threadId": "R_ywDoABC123",
+       "isResolved": false,
+       "path": "internal/service.go",
+       "line": 42,
+       "isOutdated": false
+     }
+   ]
+
+   gh pr-review threads resolve --thread-id R_ywDoABC123 owner/repo#42
+
+   {
+     "threadId": "R_ywDoABC123",
+     "isResolved": true,
+     "changed": true
+   }
+   ```
+
+## Backend policy
+
+Each command binds to a single GitHub backend—there are no runtime fallbacks.
+
+| Command | Backend | Notes |
+| --- | --- | --- |
+| `review --start` | GraphQL | Opens a pending review via `addPullRequestReview`. |
+| `review --add-comment` | GraphQL | Requires a `PRR_…` review node ID. |
+| `review pending-id` | GraphQL | Fails with guidance if the viewer login is unavailable; pass `--reviewer`. |
+| `review latest-id` | REST | Walks `/pulls/{number}/reviews` to find the latest submitted review. |
+| `review --submit` | REST | Accepts only numeric review IDs and posts `/reviews/{id}/events`. |
+| `comments ids` | REST | Pages `/reviews/{id}/comments`; optional reviewer resolution uses REST only. |
+| `comments reply` | REST (GraphQL only locates pending reviews before REST auto-submission) | Replies via REST; when GitHub blocks the reply due to a pending review, the extension discovers pending review IDs via GraphQL and submits them with REST before retrying. |
+| `threads list` | GraphQL | Enumerates review threads for the pull request. |
+| `threads resolve` / `unresolve` | GraphQL (+ REST when mapping `--comment-id`) | Mutates thread resolution with GraphQL; a REST lookup translates numeric comment IDs to node IDs. |
+| `threads find` | GraphQL (+ REST when mapping `--comment_id`) | Returns `{ "id", "isResolved" }`. |
+
+## Installation & upgrade
+
+### Precompiled binaries (macOS, Linux x64, Windows x64)
 
 ```sh
 gh extension install Agyn-sandbox/gh-pr-review
-# or update
+# or upgrade in-place
 gh extension upgrade Agyn-sandbox/gh-pr-review
 ```
 
-## Commands
-
-### List review comments
-
-Fetch review comments for a specific review or the latest submission:
+Verify the installation with:
 
 ```sh
-# Provide a review ID explicitly
-gh pr-review comments --list --review-id 123456 owner/repo#42
-
-# Resolve the latest review for the authenticated user
-gh pr-review comments --list --latest -R owner/repo 42
-
-# Filter by reviewer login
-gh pr-review comments --list --latest --reviewer octocat owner/repo#42
+gh pr-review --version
 ```
 
-The command prints JSON and supports pagination automatically.
+### Build from source (including linux-arm64)
 
-### Reply to a review comment
+When a release does not include a linux-arm64 binary, compile from source with
+Go 1.22 or newer:
 
 ```sh
-gh pr-review comments reply --comment-id 987654 --body "LGTM" owner/repo#42
+git clone https://github.com/Agyn-sandbox/gh-pr-review.git
+cd gh-pr-review
+GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "-s -w" -o gh-pr-review .
+gh extension install . --force
 ```
 
-If the reply is blocked by an existing pending review, the extension
-auto-submits that review and retries the reply.
+The final command installs (or reinstalls) the locally built binary by
+symlinking it into the GitHub CLI extension directory. Re-run `gh pr-review
+--version` after upgrades to confirm that GitHub CLI sees the freshly built
+binary.
 
-### Manage pending reviews
+## Command examples
+
+The snippets below highlight the most common review workflows. Each example
+targets `owner/repo#42`, but pull request URLs and `-R owner/repo 42` are also
+accepted.
+
+### Manage pending reviews (GraphQL)
+
+Start or resume a review and add inline comments with GraphQL-only helpers:
 
 ```sh
-# Start a new pending review (defaults to the head commit)
+# Start a pending review and capture the PRR node id
 gh pr-review review --start owner/repo#42
 
-# Add an inline comment to an existing pending review
+# Append an inline comment to the same pending review
 gh pr-review review --add-comment \
-  --review-id R_kwM123456789 \
+  --review-id PRR_kwDOAAABbcdEFG12 \
   --path internal/service.go \
   --line 42 \
-  --body "nit: use helper" \
+  --body "nit: prefer helper" \
   owner/repo#42
 
-# Submit the review with a specific event (REST review ID required)
+# Locate the latest pending review for a specific reviewer
+gh pr-review review pending-id --reviewer octocat owner/repo#42
+```
+
+### Submit the review (REST only)
+
+`review --submit` enforces numeric review identifiers and emits the normalized
+review state. Swap the event to produce `COMMENT`, `APPROVE`, or
+`REQUEST_CHANGES` submissions:
+
+```sh
+# Leave a general comment on the review
+gh pr-review review --submit \
+  --review-id 3531807471 \
+  --event COMMENT \
+  --body "Nice refactor" \
+  owner/repo#42
+
+# Approve without a body
+gh pr-review review --submit \
+  --review-id 3531807471 \
+  --event APPROVE \
+  owner/repo#42
+
+# Request changes with guidance
 gh pr-review review --submit \
   --review-id 3531807471 \
   --event REQUEST_CHANGES \
-  --body "Please update tests" \
+  --body "Missing negative tests" \
+  owner/repo#42
+```
+
+Each invocation returns the same `ReviewState` object documented in
+[docs/SCHEMAS.md](docs/SCHEMAS.md), with optional fields omitted when empty.
+
+### Comment helpers (REST)
+
+Use REST-focused helpers to map identifiers and post replies:
+
+```sh
+# Emit minimal comment metadata (arrays default to [])
+gh pr-review comments ids --review_id 3531807471 --limit 20 owner/repo#42
+
+# Reply with the full REST payload
+gh pr-review comments reply \
+  --comment-id 987654321 \
+  --body "Thanks for catching this" \
   owner/repo#42
 
-The `--review-id` flag accepts different identifier types depending on the
-action: use the numeric REST review ID when submitting, and GraphQL review node
-IDs for operations like `--add-comment`.
+# Emit only the reply id when you do not need the full payload
+gh pr-review comments reply \
+  --comment-id 987654321 \
+  --body "Ack" \
+  --concise \
+  owner/repo#42
 ```
 
-### Manage review threads
+When GitHub blocks a reply because you have an outstanding pending review, the
+extension locates those pending review identifiers with GraphQL and then
+auto-submits them via REST using a `COMMENT` event before retrying the reply.
 
-List threads and filter by resolution state or participation. Output is always JSON:
+### Thread helpers (GraphQL with optional REST lookups)
 
 ```sh
-# List unresolved threads you can resolve or participated in
+# List unresolved threads you can act on
 gh pr-review threads list --unresolved --mine owner/repo#42
 
-# Include all review threads for a pull request URL
-gh pr-review threads list https://github.com/owner/repo/pull/42
-```
-
-Resolve or unresolve threads using either the thread node ID or a REST
-comment identifier:
-
-```sh
-# Resolve by thread node ID
+# Resolve a thread by GraphQL id
 gh pr-review threads resolve --thread-id R_ywDoABC123 owner/repo#42
 
-# Resolve by comment identifier (maps to thread automatically)
-gh pr-review threads resolve --comment-id 987654 owner/repo#42
+# Resolve by database comment id (REST lookup + GraphQL mutation)
+gh pr-review threads resolve --comment-id 2582545223 owner/repo#42
 
 # Reopen a thread
 gh pr-review threads unresolve --thread-id R_ywDoABC123 owner/repo#42
 ```
 
-All commands accept `-R owner/repo`, pull request URLs, or the `owner/repo#123`
-shorthand and do not require a local git checkout. Authentication and host
-resolution defer to the existing `gh` CLI configuration, including `GH_HOST` for
-GitHub Enterprise environments.
-
-### Helper commands for identifiers
-
-Emit minimal JSON for frequently needed identifiers:
-
-```sh
-# Locate the latest pending review for a reviewer (GraphQL only)
-gh pr-review review pending-id --per_page 100 --reviewer octocat owner/repo#42
-
-# Locate the latest submitted review for a reviewer
-gh pr-review review latest-id --per_page 100 --page 1 --reviewer octocat owner/repo#42
-
-# List comment identifiers (with bodies) for a review
-gh pr-review comments ids --review_id 3531807471 --limit 50 owner/repo#42
-
-# Map a comment to its thread (or fetch by thread ID) with minimal schema
-gh pr-review threads find --comment_id 2582545223 owner/repo#42
-```
-
-Outputs are pure JSON with REST/GraphQL field names and include only fields that
-are present from the source APIs (no null placeholders). Pending-review helpers
-use GitHub's GraphQL API exclusively and fail fast if required payloads are
-missing. When the authenticated viewer login cannot be determined, the command
-exits with guidance to pass `--reviewer`. The `threads find` command always
-emits exactly `{ "id", "isResolved" }`.
+`threads find` returns exactly `{ "id", "isResolved" }` to connect REST
+comment identifiers to GraphQL thread nodes.
 
 ## Output conventions
 
 All commands emit JSON aligned with GitHub REST/GraphQL schemas.
 
-- Arrays are serialized as `[]` when no results are available.
-- No plaintext is printed; even errors bubble up through the CLI.
-- `gh pr-review comments reply --concise` trims the payload to `{ "id" }` while
-  the default mode returns the full REST response.
+- Arrays serialize as `[]` when empty—never `null`.
+- Optional fields are omitted entirely instead of emitting explicit `null`.
+- `gh pr-review comments reply --concise` trims the payload to `{ "id" }`; the
+  default reply returns the full REST comment object.
+- Errors bubble up through the GitHub CLI without plaintext side channels.
 
-## Agent usage guide
+## Additional docs
 
-See [docs/AGENTS.md](docs/AGENTS.md) for agent-focused workflows, prompts, and
-best practices when invoking `gh pr-review` from automation.
+- [docs/USAGE.md](docs/USAGE.md) — Command-by-command inputs, outputs, and
+  examples for v1.2.1.
+- [docs/SCHEMAS.md](docs/SCHEMAS.md) — JSON schemas for each structured
+  response (optional fields omitted rather than set to null).
+- [docs/AGENTS.md](docs/AGENTS.md) — Agent-focused workflows, prompts, and
+  best practices.
 
 ## Development
 
