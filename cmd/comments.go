@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -110,6 +112,7 @@ func newCommentsReplyCommand(parent *commentsOptions) *cobra.Command {
 	cmd.Flags().IntVar(&opts.Pull, "pr", 0, "Pull request number")
 	cmd.Flags().Int64Var(&opts.CommentID, "comment-id", 0, "Review comment identifier to reply to")
 	cmd.Flags().StringVar(&opts.Body, "body", "", "Reply text")
+	cmd.Flags().BoolVar(&opts.Concise, "concise", false, "Emit minimal reply payload { \"id\" }")
 	_ = cmd.MarkFlagRequired("comment-id")
 	_ = cmd.MarkFlagRequired("body")
 
@@ -122,6 +125,7 @@ type commentsReplyOptions struct {
 	Selector  string
 	CommentID int64
 	Body      string
+	Concise   bool
 }
 
 func runCommentsReply(cmd *cobra.Command, opts *commentsReplyOptions) error {
@@ -144,6 +148,18 @@ func runCommentsReply(cmd *cobra.Command, opts *commentsReplyOptions) error {
 	})
 	if err != nil {
 		return err
+	}
+	if opts.Concise {
+		var minimal struct {
+			ID int64 `json:"id"`
+		}
+		if err := json.Unmarshal(reply, &minimal); err != nil {
+			return fmt.Errorf("parse reply payload: %w", err)
+		}
+		if minimal.ID == 0 {
+			return errors.New("reply response missing id")
+		}
+		return encodeJSON(cmd, map[string]int64{"id": minimal.ID})
 	}
 	return encodeJSON(cmd, reply)
 }
