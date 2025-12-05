@@ -3,6 +3,7 @@ package comments
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/Agyn-sandbox/gh-pr-review/internal/resolver"
@@ -58,16 +59,29 @@ func TestServiceReply_RejectsBlankBody(t *testing.T) {
 func TestServiceReply_SendsMutation(t *testing.T) {
 	api := &fakeAPI{}
 	api.graphqlFunc = func(query string, variables map[string]interface{}, result interface{}) error {
-		require.Contains(t, query, "AddPullRequestReviewThreadReply")
-		input, ok := variables["input"].(map[string]interface{})
-		require.True(t, ok)
-		require.Equal(t, "PRRT_thread", input["pullRequestReviewThreadId"])
-		require.Equal(t, "Body text", input["body"])
-		require.Equal(t, "PRR_pending", input["pullRequestReviewId"])
+		switch {
+		case strings.Contains(query, "AddPullRequestReviewThreadReply"):
+			input, ok := variables["input"].(map[string]interface{})
+			require.True(t, ok)
+			require.Equal(t, "PRRT_thread", input["pullRequestReviewThreadId"])
+			require.Equal(t, "Body text", input["body"])
+			require.Equal(t, "PRR_pending", input["pullRequestReviewId"])
 
-		payload := map[string]interface{}{
-			"addPullRequestReviewThreadReply": map[string]interface{}{
-				"comment": map[string]interface{}{
+			payload := map[string]interface{}{
+				"addPullRequestReviewThreadReply": map[string]interface{}{
+					"comment": map[string]interface{}{
+						"id":          "PRRC_reply",
+						"body":        "Body text",
+						"publishedAt": "2025-12-03T10:00:00Z",
+						"author":      map[string]interface{}{"login": "octocat"},
+					},
+				},
+			}
+			return assign(result, payload)
+		case strings.Contains(query, "PullRequestReviewCommentDetails"):
+			require.Equal(t, "PRRC_reply", variables["id"])
+			payload := map[string]interface{}{
+				"node": map[string]interface{}{
 					"id":         "PRRC_reply",
 					"databaseId": 101,
 					"body":       "Body text",
@@ -82,22 +96,30 @@ func TestServiceReply_SendsMutation(t *testing.T) {
 						"databaseId": 202,
 						"state":      "PENDING",
 					},
-					"pullRequestReviewThread": map[string]interface{}{
-						"id":         "PRRT_thread",
-						"isResolved": true,
-						"isOutdated": false,
-					},
 					"replyTo": map[string]interface{}{"id": "PRRC_parent"},
 				},
-			},
+			}
+			return assign(result, payload)
+		case strings.Contains(query, "PullRequestReviewThreadDetails"):
+			require.Equal(t, "PRRT_thread", variables["id"])
+			payload := map[string]interface{}{
+				"node": map[string]interface{}{
+					"id":         "PRRT_thread",
+					"isResolved": true,
+					"isOutdated": false,
+				},
+			}
+			return assign(result, payload)
+		default:
+			t.Fatalf("unexpected query: %s", query)
+			return nil
 		}
-		return assign(result, payload)
 	}
 
 	svc := NewService(api)
 	reply, err := svc.Reply(resolver.Identity{}, ReplyOptions{ThreadID: "PRRT_thread", ReviewID: "PRR_pending", Body: "Body text"})
 	require.NoError(t, err)
-	assert.Equal(t, "PRRC_reply", reply.ID)
+	assert.Equal(t, "PRRC_reply", reply.CommentNodeID)
 	assert.Equal(t, "PRRT_thread", reply.ThreadID)
 	assert.True(t, reply.ThreadIsResolved)
 	assert.False(t, reply.ThreadIsOutdated)
@@ -130,14 +152,27 @@ func TestServiceReply_SendsMutation(t *testing.T) {
 func TestServiceReply_OmitsOptionalFields(t *testing.T) {
 	api := &fakeAPI{}
 	api.graphqlFunc = func(query string, variables map[string]interface{}, result interface{}) error {
-		input, ok := variables["input"].(map[string]interface{})
-		require.True(t, ok)
-		_, hasReview := input["pullRequestReviewId"]
-		require.False(t, hasReview)
+		switch {
+		case strings.Contains(query, "AddPullRequestReviewThreadReply"):
+			input, ok := variables["input"].(map[string]interface{})
+			require.True(t, ok)
+			_, hasReview := input["pullRequestReviewId"]
+			require.False(t, hasReview)
 
-		payload := map[string]interface{}{
-			"addPullRequestReviewThreadReply": map[string]interface{}{
-				"comment": map[string]interface{}{
+			payload := map[string]interface{}{
+				"addPullRequestReviewThreadReply": map[string]interface{}{
+					"comment": map[string]interface{}{
+						"id":          "PRRC_reply",
+						"body":        "Ack",
+						"publishedAt": "2025-12-03T10:00:00Z",
+						"author":      map[string]interface{}{"login": "octocat"},
+					},
+				},
+			}
+			return assign(result, payload)
+		case strings.Contains(query, "PullRequestReviewCommentDetails"):
+			payload := map[string]interface{}{
+				"node": map[string]interface{}{
 					"id":                "PRRC_reply",
 					"databaseId":        nil,
 					"body":              "Ack",
@@ -148,22 +183,29 @@ func TestServiceReply_OmitsOptionalFields(t *testing.T) {
 					"updatedAt":         "2025-12-03T10:05:00Z",
 					"author":            map[string]interface{}{"login": "octocat"},
 					"pullRequestReview": nil,
-					"pullRequestReviewThread": map[string]interface{}{
-						"id":         "PRRT_thread",
-						"isResolved": false,
-						"isOutdated": true,
-					},
-					"replyTo": nil,
+					"replyTo":           nil,
 				},
-			},
+			}
+			return assign(result, payload)
+		case strings.Contains(query, "PullRequestReviewThreadDetails"):
+			payload := map[string]interface{}{
+				"node": map[string]interface{}{
+					"id":         "PRRT_thread",
+					"isResolved": false,
+					"isOutdated": true,
+				},
+			}
+			return assign(result, payload)
+		default:
+			t.Fatalf("unexpected query: %s", query)
+			return nil
 		}
-		return assign(result, payload)
 	}
 
 	svc := NewService(api)
 	reply, err := svc.Reply(resolver.Identity{}, ReplyOptions{ThreadID: "PRRT_thread", Body: "Ack"})
 	require.NoError(t, err)
-	assert.Equal(t, "PRRC_reply", reply.ID)
+	assert.Equal(t, "PRRC_reply", reply.CommentNodeID)
 	assert.Equal(t, "PRRT_thread", reply.ThreadID)
 	assert.False(t, reply.ThreadIsResolved)
 	assert.True(t, reply.ThreadIsOutdated)
@@ -182,6 +224,7 @@ func TestServiceReply_OmitsOptionalFields(t *testing.T) {
 func TestServiceReply_ErrorsOnMissingComment(t *testing.T) {
 	api := &fakeAPI{}
 	api.graphqlFunc = func(query string, variables map[string]interface{}, result interface{}) error {
+		require.Contains(t, query, "AddPullRequestReviewThreadReply")
 		payload := map[string]interface{}{
 			"addPullRequestReviewThreadReply": map[string]interface{}{
 				"comment": nil,
@@ -194,4 +237,51 @@ func TestServiceReply_ErrorsOnMissingComment(t *testing.T) {
 	_, err := svc.Reply(resolver.Identity{}, ReplyOptions{ThreadID: "PRRT_thread", Body: "Ack"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "mutation response missing comment")
+}
+
+func TestServiceReply_ErrorsOnMissingThread(t *testing.T) {
+	api := &fakeAPI{}
+	api.graphqlFunc = func(query string, variables map[string]interface{}, result interface{}) error {
+		switch {
+		case strings.Contains(query, "AddPullRequestReviewThreadReply"):
+			payload := map[string]interface{}{
+				"addPullRequestReviewThreadReply": map[string]interface{}{
+					"comment": map[string]interface{}{
+						"id":          "PRRC_reply",
+						"body":        "Ack",
+						"publishedAt": "2025-12-03T10:00:00Z",
+						"author":      map[string]interface{}{"login": "octocat"},
+					},
+				},
+			}
+			return assign(result, payload)
+		case strings.Contains(query, "PullRequestReviewCommentDetails"):
+			payload := map[string]interface{}{
+				"node": map[string]interface{}{
+					"id":        "PRRC_reply",
+					"body":      "Ack",
+					"diffHunk":  "",
+					"path":      "",
+					"url":       "https://example.com/comment",
+					"createdAt": "2025-12-03T10:00:00Z",
+					"updatedAt": "2025-12-03T10:05:00Z",
+					"author":    map[string]interface{}{"login": "octocat"},
+				},
+			}
+			return assign(result, payload)
+		case strings.Contains(query, "PullRequestReviewThreadDetails"):
+			payload := map[string]interface{}{
+				"node": nil,
+			}
+			return assign(result, payload)
+		default:
+			t.Fatalf("unexpected query: %s", query)
+			return nil
+		}
+	}
+
+	svc := NewService(api)
+	_, err := svc.Reply(resolver.Identity{}, ReplyOptions{ThreadID: "PRRT_thread", Body: "Ack"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to load thread details")
 }
