@@ -1,9 +1,20 @@
 # gh-pr-review
 [![Agyn badge](https://agyn.io/badges/badge_dark.svg)](http://agyn.io)
 
-`gh-pr-review` is a precompiled GitHub CLI extension for high-signal pull
-request reviews. It manages pending GraphQL reviews, surfaces thread metadata,
-and resolves discussions without cloning repositories.
+`gh-pr-review` is a GitHub CLI extension that finally brings **inline PR review comments** to the terminal.  
+GitHub’s built-in `gh` tool does *not* show inline comments or review threads — but this extension does.
+
+With `gh-pr-review`, you can:
+
+- View complete **inline review threads** with file and line context  
+- See **unresolved comments** during code review  
+- Reply to inline comments directly from the terminal  
+- Resolve review threads programmatically  
+- Export structured output ideal for **LLMs and automated PR review agents**
+
+Designed for developers, DevOps teams, and AI systems that need **full pull request review context**, not just top-level comments.
+
+**Blog post:** [gh-pr-review: LLM-friendly PR review workflows in your CLI](https://agyn.io/blog/gh-pr-review-cli-agent-workflows) — explains the motivation, design principles, and CLI + JSON output examples.  
 
 - [Quickstart](#quickstart)
 - [Review view](#review-view)
@@ -11,7 +22,6 @@ and resolves discussions without cloning repositories.
 - [Additional docs](#additional-docs)
 
 
-Paper: https://agyn.io/blog/gh-pr-review-cli-agent-workflows
 
 
 ## Quickstart
