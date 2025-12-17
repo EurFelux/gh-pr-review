@@ -260,18 +260,13 @@ gh pr-review review view -R owner/repo --pr 3 --not_outdated --include-comment-n
 
 ### Replying to threads
 
-Use the `thread_id` values surfaced in the report when replying. Provide
-`--review-id` alongside `--thread-id` when continuing a pending review you own.
+Use the `thread_id` values surfaced in the report when replying.
 
 ```sh
-gh pr-review comments reply -R owner/repo --pr 3 \
+gh pr-review comments reply 3 -R owner/repo \
   --thread-id PRRT_kwDOAAABbcdEFG12 \
   --body "Follow-up addressed in commit abc123"
 
-gh pr-review comments reply -R owner/repo --pr 3 \
-  --thread-id PRRT_kwDOAAABbcdEFG12 \
-  --review-id PRR_kwDOAAABbcdEFG12 \
-  --body "Reply from pending review"
 ```
 
 ## Backend policy
