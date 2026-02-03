@@ -98,6 +98,27 @@ gh pr-review review --add-comment \
   -R owner/repo <pr-number>
 ```
 
+Add multi-line comment (range):
+
+```sh
+gh pr-review review --add-comment \
+  --review-id <PRR_...> \
+  --path <file-path> \
+  --start-line <start-line> \
+  --line <end-line> \
+  --start-side <LEFT|RIGHT> \
+  --side <LEFT|RIGHT> \
+  --body "Your comment" \
+  -R owner/repo <pr-number>
+```
+
+**Comment positioning parameters:**
+
+- `--line` (required) - The line number where the comment ends
+- `--side` (optional) - Which version of the code to comment on: `LEFT` (original) or `RIGHT` (modified). Default: `RIGHT`
+- `--start-line` (optional) - The starting line number for multi-line comments. When specified, `--line` becomes the end line
+- `--start-side` (optional) - Which side the start line is on. Use when `--start-line` is specified
+
 Edit a comment in pending review (requires comment node ID PRRC_...):
 
 ```sh
@@ -205,6 +226,7 @@ gh pr-review review view --unresolved --not_outdated -R owner/repo --pr $(gh pr 
 - Empty arrays `[]` are returned when no data matches filters
 - The `--include-comment-node-id` flag adds PRRC_... IDs when needed
 - Thread replies are sorted by created_at ascending
+- Use `--start-line` and `--start-side` for multi-line comments; `--line` becomes the end line
 
 ## Documentation Links
 
