@@ -114,10 +114,26 @@ gh pr-review review --add-comment \
 
 **Comment positioning parameters:**
 
-- `--line` (required) - The line number where the comment ends
+- `--line` (required) - The line number where the comment ends. **Important:** This must be a line number within the PR diff hunk, NOT the absolute line number in the original file. See line number calculation below.
 - `--side` (optional) - Which version of the code to comment on: `LEFT` (original) or `RIGHT` (modified). Default: `RIGHT`
 - `--start-line` (optional) - The starting line number for multi-line comments. When specified, `--line` becomes the end line
 - `--start-side` (optional) - Which side the start line is on. Use when `--start-line` is specified
+
+**Line Number Calculation:**
+
+The `--line` value must be within the diff hunk range. Check the diff header:
+```
+@@ -oldStart,oldCount +newStart,newCount @@
+```
+- Valid range: `newStart` to `(newStart + newCount - 1)`
+
+Examples:
+| Diff Header | Valid Range | To comment on... | Use |
+|-------------|-------------|------------------|-----|
+| `@@ -0,0 +1,173 @@` | 1-173 | Line 80 of new file | `--line 80` |
+| `@@ -224,6 +224,112 @@` | 224-335 | 50th line in hunk | `--line 273` |
+
+Get diff info: `gh api repos/OWNER/REPO/pulls/PR/files --jq '.[].patch'`
 
 Edit a comment in pending review (requires comment node ID PRRC_...):
 

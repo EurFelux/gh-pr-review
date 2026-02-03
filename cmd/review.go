@@ -18,7 +18,24 @@ func newReviewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "review [<number> | <url>]",
 		Short: "Manage pending reviews via GraphQL helpers",
-		Args:  cobra.MaximumNArgs(1),
+		Long: `Manage pending reviews via GraphQL helpers.
+
+LINE NUMBER CALCULATION FOR --add-comment:
+
+The --line flag expects a line number within the PR diff hunk, not the absolute
+line number in the original file.
+
+Diff header format: @@ -oldStart,oldCount +newStart,newCount @@
+  - newStart: starting line of new code in the diff
+  - newCount: number of lines in the new code
+  - Valid range: newStart to (newStart + newCount - 1)
+
+Examples:
+  - New file @@ -0,0 +1,173 @@:     use --line 80 for line 80
+  - Modified @@ -224,6 +224,112 @@: use --line 224 to 335
+
+Get diff info: gh api repos/OWNER/REPO/pulls/PR/files --jq '.[].patch'`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				opts.Selector = args[0]
@@ -40,7 +57,7 @@ func newReviewCommand() *cobra.Command {
 	cmd.Flags().StringVar(&opts.ReviewID, "review-id", "", "Review identifier (GraphQL review node ID)")
 	cmd.Flags().StringVar(&opts.CommentID, "comment-id", "", "Comment identifier (GraphQL comment node ID, PRRC_...)")
 	cmd.Flags().StringVar(&opts.Path, "path", "", "File path for inline comment")
-	cmd.Flags().IntVar(&opts.Line, "line", 0, "Line number for inline comment")
+	cmd.Flags().IntVar(&opts.Line, "line", 0, "Line number for inline comment (must be within the PR diff hunk, not absolute file line)")
 	cmd.Flags().StringVar(&opts.Side, "side", opts.Side, "Diff side for inline comment (LEFT or RIGHT)")
 	cmd.Flags().IntVar(&opts.StartLine, "start-line", 0, "Start line for multi-line comments")
 	cmd.Flags().StringVar(&opts.StartSide, "start-side", "", "Start side for multi-line comments")

@@ -1,6 +1,7 @@
 package review
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -198,7 +199,10 @@ func (s *Service) AddThread(pr resolver.Identity, input ThreadInput) (*ReviewThr
 	trimmedThreadID := strings.TrimSpace(thread.ID)
 	trimmedThreadPath := strings.TrimSpace(thread.Path)
 	if trimmedThreadID == "" || trimmedThreadPath == "" {
-		return nil, errors.New("addPullRequestReviewThread returned incomplete thread data")
+		respJSON, _ := json.MarshalIndent(resp, "", "  ")
+		reqJSON, _ := json.MarshalIndent(graphqlInput, "", "  ")
+		return nil, fmt.Errorf("addPullRequestReviewThread returned incomplete thread data. Possible causes: (1) review is not in PENDING state, (2) file path does not exist in PR, (3) line number is invalid. request=%s, raw_response=%s",
+			reqJSON, respJSON)
 	}
 
 	result := ReviewThread{ID: trimmedThreadID, Path: trimmedThreadPath, IsOutdated: thread.IsOutdated}

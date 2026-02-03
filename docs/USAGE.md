@@ -41,11 +41,19 @@ gh pr-review review --start -R owner/repo 42
 - **Output schema:** [`ReviewThread`](SCHEMAS.md#reviewthread) — required fields
   `id`, `path`, `is_outdated`; optional `line`.
 
+> **Important:** `--line` must be a line number within the PR diff hunk, not the
+> absolute line number in the original file. For modified files, check the diff
+> header `@@ -oldStart,oldCount +newStart,newCount @@` — the new code starts at
+> `newStart`, and valid line numbers range from `newStart` to `newStart + newCount - 1`.
+
 ```sh
+# Example: file modified at @@ -224,6 +224,112 @@
+# Valid line range: 224 to 335 (224 + 112 - 1)
 gh pr-review review --add-comment \
   --review-id PRR_kwDOAAABbcdEFG12 \
   --path internal/service.go \
-  --line 42 \
+  --line 280 \
+  --side RIGHT \
   --body "nit: prefer helper" \
   -R owner/repo 42
 
@@ -53,9 +61,31 @@ gh pr-review review --add-comment \
   "id": "PRRT_kwDOAAABbcdEFG12",
   "path": "internal/service.go",
   "is_outdated": false,
-  "line": 42
+  "line": 280
 }
 ```
+
+**Finding the correct line number:**
+
+```sh
+# Get diff hunk info for a file
+gh api repos/OWNER/REPO/pulls/PR_NUMBER/files \
+  --jq '.[] | select(.filename | contains("service.go")) | .patch' | head -1
+
+# Output: @@ -224,6 +224,112 @@
+#                ^^^ newStart (use this)
+```
+
+**Line number calculation examples:**
+
+| Scenario | Diff Header | New Code Range | To comment on... | Use --line |
+|----------|-------------|----------------|------------------|------------|
+| New file | `@@ -0,0 +1,173 @@` | 1 to 173 | Line 80 of new file | `80` |
+| Modified | `@@ -224,6 +224,112 @@` | 224 to 335 | First new line (224) | `224` |
+| Modified | `@@ -224,6 +224,112 @@` | 224 to 335 | 50th new line | `273` (224+49) |
+| Modified | `@@ -50,20 +55,30 @@` | 55 to 84 | Line 60 of new version | `60` |
+
+**Common mistake:** Using the absolute line number from the file (e.g., `525`) instead of the line number relative to the diff hunk (e.g., `280`).
 
 ## review --edit-comment (GraphQL only)
 
