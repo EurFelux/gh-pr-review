@@ -42,7 +42,8 @@ type PreviewResult struct {
 }
 
 // Preview fetches the current user's pending review with code context.
-func (s *Service) Preview(pr resolver.Identity) (*PreviewResult, error) {
+// If commentID is non-empty, only the matching comment is returned.
+func (s *Service) Preview(pr resolver.Identity, commentID string) (*PreviewResult, error) {
 	// Get current viewer
 	viewer, err := s.currentViewer()
 	if err != nil {
@@ -113,6 +114,21 @@ func (s *Service) Preview(pr resolver.Identity) (*PreviewResult, error) {
 		}
 
 		comments = append(comments, preview)
+	}
+
+	// Filter to a single comment if commentID is specified
+	if commentID != "" {
+		var found *CommentPreview
+		for i := range comments {
+			if comments[i].ID == commentID {
+				found = &comments[i]
+				break
+			}
+		}
+		if found == nil {
+			return nil, fmt.Errorf("comment %s not found in pending review", commentID)
+		}
+		comments = []CommentPreview{*found}
 	}
 
 	result := &PreviewResult{

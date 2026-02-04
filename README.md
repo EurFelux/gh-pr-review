@@ -287,7 +287,7 @@ Each command binds to a single GitHub backend—there are no runtime fallbacks.
 ## Additional docs
 
 - [docs/USAGE.md](docs/USAGE.md) — Command-by-command inputs, outputs, and
-  examples for v2.0.0.
+  examples for v2.1.0.
 - [docs/SCHEMAS.md](docs/SCHEMAS.md) — JSON schemas for each structured
   response (optional fields omitted rather than set to null).
 - [docs/AGENTS.md](docs/AGENTS.md) — Agent-focused workflows, prompts, and

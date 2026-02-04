@@ -1,4 +1,4 @@
-# Output schemas (v2.0.0)
+# Output schemas (v2.1.0)
 
 Optional fields are omitted entirely (never serialized as `null`). Unless noted,
 schemas disallow additional properties to surface unexpected payload changes.

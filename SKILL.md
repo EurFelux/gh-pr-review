@@ -247,7 +247,11 @@ gh pr-review review delete-comment \
 Preview pending review comments before submitting:
 
 ```sh
+# Preview all pending comments
 gh pr-review review preview -R owner/repo <pr-number>
+
+# Preview a single comment by ID
+gh pr-review review preview --comment-id <PRRC_...> -R owner/repo <pr-number>
 ```
 
 **Output:** Shows pending comments with code context (diff lines each comment is attached to), including accurate LEFT/RIGHT side identification. The `code_context` field contains the actual diff lines.
@@ -382,7 +386,7 @@ Line numbers are **absolute file line numbers** (the same numbers shown in the d
 3. Add comments: `gh pr-review review add-comment -R owner/repo <pr> --review-id <PRR_...> --path <file> --line <num> --body "..."`
 4. Edit comments (if needed): `gh pr-review review edit-comment -R owner/repo <pr> --comment-id <PRRC_...> --body "Updated text"`
 5. Delete comments (if needed): `gh pr-review review delete-comment -R owner/repo <pr> --comment-id <PRRC_...>`
-6. **Preview before submitting:** `gh pr-review review preview -R owner/repo <pr>` — verify comments target the correct code lines
+6. **Preview before submitting:** `gh pr-review review preview -R owner/repo <pr>` — verify comments target the correct code lines. Use `--comment-id <PRRC_...>` to preview a single comment.
 
 7. **Verify code_context alignment:** Check the `code_context` field in preview output to ensure each comment is attached to the correct code:
    - The `code_context` shows the actual diff lines your comment will appear on

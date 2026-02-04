@@ -1,4 +1,4 @@
-# Usage reference (v2.0.0)
+# Usage reference (v2.1.0)
 
 All commands accept pull request selectors as either:
 
@@ -232,12 +232,18 @@ gh pr-review review submit \
 - **Inputs:**
   - Optional pull request selector argument.
   - `--repo` / `--pr` flags when not using the selector shorthand.
+  - `--comment-id` (optional): GraphQL comment node ID (`PRRC_…`) to preview
+    a single specific comment instead of all pending comments.
 - **Backend:** GitHub GraphQL `pullRequest.reviewThreads` query + REST API for
   file patches.
 - **Output schema:**
 
 ```sh
+# Preview all pending comments
 gh pr-review review preview -R owner/repo 42
+
+# Preview a single comment by ID
+gh pr-review review preview --comment-id PRRC_kwDOAAABbcdEFG12 -R owner/repo 42
 
 {
   "review_id": "PRR_kwDOAAABbcdEFG12",

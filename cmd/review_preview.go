@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -10,9 +12,10 @@ import (
 )
 
 type reviewPreviewOptions struct {
-	Repo     string
-	Pull     int
-	Selector string
+	Repo      string
+	Pull      int
+	Selector  string
+	CommentID string
 }
 
 func newReviewPreviewCommand() *cobra.Command {
@@ -32,11 +35,17 @@ func newReviewPreviewCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.Repo, "repo", "R", "", "Repository in 'owner/repo' format")
 	cmd.Flags().IntVar(&opts.Pull, "pr", 0, "Pull request number")
+	cmd.Flags().StringVar(&opts.CommentID, "comment-id", "", "Comment identifier (GraphQL comment node ID, PRRC_...)")
 
 	return cmd
 }
 
 func runReviewPreview(cmd *cobra.Command, opts *reviewPreviewOptions) error {
+	commentID := strings.TrimSpace(opts.CommentID)
+	if commentID != "" && !strings.HasPrefix(commentID, "PRRC_") {
+		return fmt.Errorf("invalid comment id %q: must be a GraphQL node id (PRRC_...)", commentID)
+	}
+
 	selector, err := resolver.NormalizeSelector(opts.Selector, opts.Pull)
 	if err != nil {
 		return err
@@ -48,7 +57,7 @@ func runReviewPreview(cmd *cobra.Command, opts *reviewPreviewOptions) error {
 	}
 
 	service := preview.NewService(apiClientFactory(identity.Host))
-	result, err := service.Preview(identity)
+	result, err := service.Preview(identity, commentID)
 	if err != nil {
 		return err
 	}
