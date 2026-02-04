@@ -218,7 +218,9 @@ Preview pending review comments before submitting:
 gh pr-review review --preview -R owner/repo <pr-number>
 ```
 
-**Output:** Shows pending comments with code context (diff lines each comment is attached to), including accurate LEFT/RIGHT side identification. The `code_context` field contains the actual diff lines, making it easy to verify each comment targets the correct code before submission.
+**Output:** Shows pending comments with code context (diff lines each comment is attached to), including accurate LEFT/RIGHT side identification. The `code_context` field contains the actual diff lines.
+
+> **Critical:** Always verify `code_context` content matches your intended target code. A successful API response doesn't guarantee correct positioning — only the `code_context` lines confirm where your comment will actually appear.
 
 Submit the review:
 
@@ -285,6 +287,7 @@ Example output structure:
    - Check the `@@ -oldStart,oldCount +newStart,newCount @@` header for valid ranges
    - Use absolute file line numbers (RIGHT = new file, LEFT = old file)
 8. **Preview before submitting** (`--preview`) to verify comments target the correct code lines
+9. **After preview, verify `code_context` matches your target code** — The preview output includes `code_context` showing the actual lines each comment will attach to. Confirm these lines contain the code you intend to comment on before submitting. If there's a mismatch, adjust line numbers and re-preview.
 
 ## Common Workflows
 
@@ -314,7 +317,14 @@ Line numbers are **absolute file line numbers** (the same numbers shown in the d
 4. Edit comments (if needed): `gh pr-review review --edit-comment -R owner/repo <pr> --comment-id <PRRC_...> --body "Updated text"`
 5. Delete comments (if needed): `gh pr-review review --delete-comment -R owner/repo <pr> --comment-id <PRRC_...>`
 6. **Preview before submitting:** `gh pr-review review --preview -R owner/repo <pr>` — verify comments target the correct code lines
-7. Submit: `gh pr-review review --submit -R owner/repo <pr> --review-id <PRR_...> --event REQUEST_CHANGES --body "Summary"`
+
+7. **Verify code_context alignment:** Check the `code_context` field in preview output to ensure each comment is attached to the correct code:
+   - The `code_context` shows the actual diff lines your comment will appear on
+   - Verify these lines contain the code you intend to comment on
+   - If there's a mismatch (e.g., you wanted line 48's `Promise.all` but `code_context` shows line 50's `)` ), adjust `--line`/`--start-line` and re-preview
+   - Only proceed when all comments align with their target code
+
+8. Submit: `gh pr-review review --submit -R owner/repo <pr> --review-id <PRR_...> --event REQUEST_CHANGES --body "Summary"`
 
 ## Important Notes
 
