@@ -598,7 +598,7 @@ func TestReviewPreviewCommandNoPendingReview(t *testing.T) {
 	assert.Contains(t, err.Error(), "no pending review")
 }
 
-func TestReviewPreviewCommand_WithCommentID(t *testing.T) {
+func TestReviewPreviewCommand_WithThreadID(t *testing.T) {
 	originalFactory := apiClientFactory
 	defer func() { apiClientFactory = originalFactory }()
 
@@ -688,7 +688,7 @@ func TestReviewPreviewCommand_WithCommentID(t *testing.T) {
 	stderr := &bytes.Buffer{}
 	root.SetOut(stdout)
 	root.SetErr(stderr)
-	root.SetArgs([]string{"review", "preview", "--comment-id", "PRRC_target", "--repo", "octo/demo", "7"})
+	root.SetArgs([]string{"review", "preview", "--thread-id", "PRRT_thread2", "--repo", "octo/demo", "7"})
 
 	err := root.Execute()
 	require.NoError(t, err)
@@ -702,10 +702,11 @@ func TestReviewPreviewCommand_WithCommentID(t *testing.T) {
 	require.True(t, ok)
 	require.Len(t, comments, 1)
 	assert.Equal(t, "PRRC_target", comments[0].(map[string]interface{})["id"])
+	assert.Equal(t, "PRRT_thread2", comments[0].(map[string]interface{})["thread_id"])
 	assert.Equal(t, "src/utils.go", comments[0].(map[string]interface{})["path"])
 }
 
-func TestReviewPreviewCommand_InvalidCommentID(t *testing.T) {
+func TestReviewPreviewCommand_InvalidThreadID(t *testing.T) {
 	originalFactory := apiClientFactory
 	defer func() { apiClientFactory = originalFactory }()
 
@@ -718,15 +719,15 @@ func TestReviewPreviewCommand_InvalidCommentID(t *testing.T) {
 	root := newRootCommand()
 	root.SetOut(&bytes.Buffer{})
 	root.SetErr(&bytes.Buffer{})
-	root.SetArgs([]string{"review", "preview", "--comment-id", "12345", "--repo", "octo/demo", "7"})
+	root.SetArgs([]string{"review", "preview", "--thread-id", "12345", "--repo", "octo/demo", "7"})
 
 	err := root.Execute()
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid comment id")
-	assert.Contains(t, err.Error(), "PRRC_")
+	assert.Contains(t, err.Error(), "invalid thread id")
+	assert.Contains(t, err.Error(), "PRRT_")
 }
 
-func TestReviewPreviewCommand_CommentIDNotFound(t *testing.T) {
+func TestReviewPreviewCommand_ThreadIDNotFound(t *testing.T) {
 	originalFactory := apiClientFactory
 	defer func() { apiClientFactory = originalFactory }()
 
@@ -787,9 +788,9 @@ func TestReviewPreviewCommand_CommentIDNotFound(t *testing.T) {
 	root := newRootCommand()
 	root.SetOut(&bytes.Buffer{})
 	root.SetErr(&bytes.Buffer{})
-	root.SetArgs([]string{"review", "preview", "--comment-id", "PRRC_nonexistent", "--repo", "octo/demo", "7"})
+	root.SetArgs([]string{"review", "preview", "--thread-id", "PRRT_nonexistent", "--repo", "octo/demo", "7"})
 
 	err := root.Execute()
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "comment PRRC_nonexistent not found in pending review")
+	assert.Contains(t, err.Error(), "thread PRRT_nonexistent not found in pending review")
 }

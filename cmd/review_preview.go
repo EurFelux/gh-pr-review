@@ -12,10 +12,10 @@ import (
 )
 
 type reviewPreviewOptions struct {
-	Repo      string
-	Pull      int
-	Selector  string
-	CommentID string
+	Repo     string
+	Pull     int
+	Selector string
+	ThreadID string
 }
 
 func newReviewPreviewCommand() *cobra.Command {
@@ -35,15 +35,15 @@ func newReviewPreviewCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.Repo, "repo", "R", "", "Repository in 'owner/repo' format")
 	cmd.Flags().IntVar(&opts.Pull, "pr", 0, "Pull request number")
-	cmd.Flags().StringVar(&opts.CommentID, "comment-id", "", "Comment identifier (GraphQL comment node ID, PRRC_...)")
+	cmd.Flags().StringVar(&opts.ThreadID, "thread-id", "", "Filter by review thread GraphQL node ID (PRRT_...)")
 
 	return cmd
 }
 
 func runReviewPreview(cmd *cobra.Command, opts *reviewPreviewOptions) error {
-	commentID := strings.TrimSpace(opts.CommentID)
-	if commentID != "" && !strings.HasPrefix(commentID, "PRRC_") {
-		return fmt.Errorf("invalid comment id %q: must be a GraphQL node id (PRRC_...)", commentID)
+	threadID := strings.TrimSpace(opts.ThreadID)
+	if threadID != "" && !strings.HasPrefix(threadID, "PRRT_") {
+		return fmt.Errorf("invalid thread id %q: must be a GraphQL node id (PRRT_...)", threadID)
 	}
 
 	selector, err := resolver.NormalizeSelector(opts.Selector, opts.Pull)
@@ -57,7 +57,7 @@ func runReviewPreview(cmd *cobra.Command, opts *reviewPreviewOptions) error {
 	}
 
 	service := preview.NewService(apiClientFactory(identity.Host))
-	result, err := service.Preview(identity, commentID)
+	result, err := service.Preview(identity, threadID)
 	if err != nil {
 		return err
 	}

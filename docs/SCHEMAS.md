@@ -312,11 +312,15 @@ Produced by `review preview`.
   "$defs": {
     "CommentPreview": {
       "type": "object",
-      "required": ["id", "database_id", "path", "line", "side", "body", "code_context"],
+      "required": ["id", "thread_id", "database_id", "path", "line", "side", "body", "code_context"],
       "properties": {
         "id": {
           "type": "string",
           "description": "GraphQL comment node identifier (PRRC_…)"
+        },
+        "thread_id": {
+          "type": "string",
+          "description": "GraphQL review thread node identifier (PRRT_…)"
         },
         "database_id": {
           "type": "integer"

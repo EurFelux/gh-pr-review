@@ -250,8 +250,8 @@ Preview pending review comments before submitting:
 # Preview all pending comments
 gh pr-review review preview -R owner/repo <pr-number>
 
-# Preview a single comment by ID
-gh pr-review review preview --comment-id <PRRC_...> -R owner/repo <pr-number>
+# Preview a single thread's comment by thread ID
+gh pr-review review preview --thread-id <PRRT_...> -R owner/repo <pr-number>
 ```
 
 **Output:** Shows pending comments with code context (diff lines each comment is attached to), including accurate LEFT/RIGHT side identification. The `code_context` field contains the actual diff lines.
@@ -322,11 +322,11 @@ Example output structure:
    - Use `gh api repos/OWNER/REPO/pulls/PR/files` to get patches
    - Check the `@@ -oldStart,oldCount +newStart,newCount @@` header for valid ranges
    - Use absolute file line numbers (RIGHT = new file, LEFT = old file)
-8. **Preview each comment immediately after adding** — After each `add-comment`, run `review preview --comment-id <PRRC_...>` and verify the `code_context` matches your intended target code. If there's a mismatch, delete and re-add the comment on the correct line before proceeding to the next comment.
+8. **Preview each comment immediately after adding** — After each `add-comment`, run `review preview --thread-id <PRRT_...>` and verify the `code_context` matches your intended target code. If there's a mismatch, delete and re-add the comment on the correct line before proceeding to the next comment.
 
 ## Per-Comment Verification Checklist (MANDATORY)
 
-After each `review add-comment`, you MUST immediately verify the comment by running `review preview --comment-id <PRRC_...>`.
+After each `review add-comment`, you MUST immediately verify the comment by running `review preview --thread-id <PRRT_...>`.
 
 ### Verification Steps (per comment)
 1. **Code Context Check (Critical):**
@@ -380,7 +380,7 @@ Line numbers are **absolute file line numbers** (the same numbers shown in the d
    ```
    Check the `@@ +newStart,newCount @@` header — valid range for RIGHT side is `newStart` to `newStart + newCount - 1`.
 3. Add a comment: `gh pr-review review add-comment -R owner/repo <pr> --review-id <PRR_...> --path <file> --line <num> --body "..."`
-4. **Immediately preview the comment just added:** `gh pr-review review preview --comment-id <PRRC_...> -R owner/repo <pr>` — verify `code_context` matches the intended target code. If mismatched, delete and re-add on the correct line.
+4. **Immediately preview the comment just added:** `gh pr-review review preview --thread-id <PRRT_...> -R owner/repo <pr>` — verify `code_context` matches the intended target code. If mismatched, delete and re-add on the correct line.
 5. Repeat steps 3–4 for each comment.
 6. Edit comments (if needed): `gh pr-review review edit-comment -R owner/repo <pr> --comment-id <PRRC_...> --body "Updated text"`
 7. Delete comments (if needed): `gh pr-review review delete-comment -R owner/repo <pr> --comment-id <PRRC_...>`

@@ -232,8 +232,8 @@ gh pr-review review submit \
 - **Inputs:**
   - Optional pull request selector argument.
   - `--repo` / `--pr` flags when not using the selector shorthand.
-  - `--comment-id` (optional): GraphQL comment node ID (`PRRC_…`) to preview
-    a single specific comment instead of all pending comments.
+  - `--thread-id` (optional): GraphQL review thread node ID (`PRRT_…`) to preview
+    a single specific thread's comment instead of all pending comments.
 - **Backend:** GitHub GraphQL `pullRequest.reviewThreads` query + REST API for
   file patches.
 - **Output schema:**
@@ -242,8 +242,8 @@ gh pr-review review submit \
 # Preview all pending comments
 gh pr-review review preview -R owner/repo 42
 
-# Preview a single comment by ID
-gh pr-review review preview --comment-id PRRC_kwDOAAABbcdEFG12 -R owner/repo 42
+# Preview a single thread's comment by thread ID
+gh pr-review review preview --thread-id PRRT_kwDOAAABbcdEFG12 -R owner/repo 42
 
 {
   "review_id": "PRR_kwDOAAABbcdEFG12",
@@ -253,6 +253,7 @@ gh pr-review review preview --comment-id PRRC_kwDOAAABbcdEFG12 -R owner/repo 42
   "comments": [
     {
       "id": "PRRC_kwDOAAABbcdEFG12",
+      "thread_id": "PRRT_kwDOAAABbcdEFG12",
       "database_id": 9876543210,
       "path": "src/services/toolCallbacks.ts",
       "line": 134,

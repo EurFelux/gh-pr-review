@@ -23,6 +23,7 @@ func NewService(api ghcli.API) *Service {
 // CommentPreview represents a single pending comment with code context.
 type CommentPreview struct {
 	ID          string   `json:"id"`
+	ThreadID    string   `json:"thread_id"`
 	DatabaseID  int      `json:"database_id"`
 	Path        string   `json:"path"`
 	Line        int      `json:"line"`
@@ -42,8 +43,8 @@ type PreviewResult struct {
 }
 
 // Preview fetches the current user's pending review with code context.
-// If commentID is non-empty, only the matching comment is returned.
-func (s *Service) Preview(pr resolver.Identity, commentID string) (*PreviewResult, error) {
+// If threadID is non-empty, only the comment from the matching thread is returned.
+func (s *Service) Preview(pr resolver.Identity, threadID string) (*PreviewResult, error) {
 	// Get current viewer
 	viewer, err := s.currentViewer()
 	if err != nil {
@@ -88,6 +89,7 @@ func (s *Service) Preview(pr resolver.Identity, commentID string) (*PreviewResul
 
 		preview := CommentPreview{
 			ID:         c.ID,
+			ThreadID:   thread.ID,
 			DatabaseID: c.DatabaseID,
 			Path:       thread.Path,
 			Side:       thread.DiffSide,
@@ -116,17 +118,17 @@ func (s *Service) Preview(pr resolver.Identity, commentID string) (*PreviewResul
 		comments = append(comments, preview)
 	}
 
-	// Filter to a single comment if commentID is specified
-	if commentID != "" {
+	// Filter to a single comment if threadID is specified
+	if threadID != "" {
 		var found *CommentPreview
 		for i := range comments {
-			if comments[i].ID == commentID {
+			if comments[i].ThreadID == threadID {
 				found = &comments[i]
 				break
 			}
 		}
 		if found == nil {
-			return nil, fmt.Errorf("comment %s not found in pending review", commentID)
+			return nil, fmt.Errorf("thread %s not found in pending review", threadID)
 		}
 		comments = []CommentPreview{*found}
 	}
