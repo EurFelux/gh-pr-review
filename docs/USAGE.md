@@ -41,10 +41,10 @@ gh pr-review review --start -R owner/repo 42
 - **Output schema:** [`ReviewThread`](SCHEMAS.md#reviewthread) — required fields
   `id`, `path`, `is_outdated`; optional `line`.
 
-> **Important:** `--line` must be a line number within the PR diff hunk, not the
-> absolute line number in the original file. For modified files, check the diff
-> header `@@ -oldStart,oldCount +newStart,newCount @@` — the new code starts at
-> `newStart`, and valid line numbers range from `newStart` to `newStart + newCount - 1`.
+> **Important:** `--line` takes the **absolute line number** in the file (on the
+> side specified by `--side`). For `RIGHT` (default), use the line number in the
+> modified file. For `LEFT`, use the line number in the original file. The line
+> must fall within a diff hunk range.
 
 ```sh
 # Example: file modified at @@ -224,6 +224,112 @@
@@ -85,7 +85,11 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/files \
 | Modified | `@@ -224,6 +224,112 @@` | 224 to 335 | 50th new line | `273` (224+49) |
 | Modified | `@@ -50,20 +55,30 @@` | 55 to 84 | Line 60 of new version | `60` |
 
-**Common mistake:** Using the absolute line number from the file (e.g., `525`) instead of the line number relative to the diff hunk (e.g., `280`).
+**Common mistake:** Using a line number that falls outside any diff hunk range. Verify your target line is within a hunk by checking the `@@` header.
+
+> **Note on LEFT side ranges**: When using `--start-line` / `--line` with `--side LEFT`,
+> the GitHub diff view will include any interleaved RIGHT side additions that fall
+> between your start and end lines. This is a GitHub rendering behavior, not a tool issue.
 
 ## review --edit-comment (GraphQL only)
 

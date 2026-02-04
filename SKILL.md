@@ -117,78 +117,82 @@ gh pr-review review --add-comment \
 
 **Comment positioning parameters:**
 
-- `--line` (required) - The line number where the comment ends. **Important:** This must be a line number within the PR diff hunk, NOT the absolute line number in the original file. See line number calculation below.
+- `--line` (required) - The absolute line number in the file where the comment ends. For `RIGHT` side, this is the line number in the **modified** file. For `LEFT` side, this is the line number in the **original** file. The line must fall within a diff hunk range.
 - `--side` (optional) - Which version of the code to comment on: `LEFT` (original) or `RIGHT` (modified). Default: `RIGHT`
 - `--start-line` (optional) - The starting line number for multi-line comments. When specified, `--line` becomes the end line
   - **Best practice**: Even for single-line comments, consider using `--start-line` with the same value as `--line`. This makes your intent explicit and avoids confusion about whether you're targeting a single line or a range.
 - `--start-side` (optional) - Which side the start line is on. Use when `--start-line` is specified
 
-**Line Number Calculation:**
+**Line Number Rules:**
 
-The `--line` value must be a **diff position** (1-based index within the diff hunk), NOT the absolute line number in the original file.
+`--line` takes the **absolute line number in the file** — the same number you see in your editor or in the diff gutter on GitHub. The line must fall within a diff hunk range (GitHub rejects lines outside the diff).
 
-### Step-by-Step Guide
+### How to verify a line is within a diff hunk
 
 **Step 1: Get the patch for the file**
 ```sh
 gh api repos/OWNER/REPO/pulls/PR/files --jq '.[] | select(.filename == "path/to/file.ts") | .patch'
 ```
 
-**Step 2: Analyze the diff hunk header**
+**Step 2: Read the diff hunk header**
 ```
 @@ -oldStart,oldCount +newStart,newCount @@
 ```
-- For **new files** (`-0,0 +1,N`): Line numbers start at 1
-- For **modified files**: Count lines from the start of the hunk (first `+` line = position 1)
-
-**Step 3: Count to your target line**
-- Count only lines starting with `+` (added/modified lines)
-- The count is 1-based within each hunk
+- For `RIGHT` side: valid range is `newStart` to `newStart + newCount - 1`
+- For `LEFT` side: valid range is `oldStart` to `oldStart + oldCount - 1`
+- For **new files** (`-0,0 +1,N`): valid range is `1` to `N`
 
 ### Examples
 
 **Example 1: New file**
 ```diff
 @@ -0,0 +1,10 @@
-+line 1   <- position 1
-+line 2   <- position 2
-+line 3   <- position 3
++line 1
++line 2
++line 3
 ```
-To comment on "line 3": Use `--line 3`
+To comment on "line 3": Use `--line 3` (absolute line number in the new file)
 
-**Example 2: Modified file**
+**Example 2: Modified file (RIGHT side)**
 ```diff
 @@ -100,5 +100,15 @@
- existing code line 100
- existing code line 101
--existing code line 102
-+new code A    <- position 1
-+new code B    <- position 2 (comment here: --line 2)
-+new code C    <- position 3
- existing code line 103
+ existing code line 100    <- RIGHT line 100
+ existing code line 101    <- RIGHT line 101
++new code A                <- RIGHT line 102
++new code B                <- RIGHT line 103 (comment here: --line 103)
++new code C                <- RIGHT line 104
+ existing code line 105    <- RIGHT line 105
 ```
-To comment on "new code B": Use `--line 2`
+To comment on "new code B": Use `--line 103 --side RIGHT`
 
-**Example 3: Multiple hunks**
-Each hunk restarts counting at 1. If your target is in the second hunk, use the position within that hunk.
+**Example 3: Modified file (LEFT side)**
+```diff
+@@ -50,7 +50,7 @@
+ import { isJSON, parseJSON } from '@renderer/utils'
+-import { defaultTimeout } from '@shared/config/constant'    <- LEFT line 53
++import { DEFAULT_TIMEOUT } from '@shared/config/constant'
+```
+To comment on the deleted import: Use `--line 53 --side LEFT`
 
 ### Quick Reference Table
 
-| Diff Header | File Type | To comment on... | Use |
-|-------------|-----------|------------------|-----|
-| `@@ -0,0 +1,173 @@` | New file | Line 80 of new file | `--line 80` |
-| `@@ -224,6 +224,112 @@` | Modified | 6th added line | `--line 6` |
+| Diff Header | Side | To comment on... | Use |
+|-------------|------|------------------|-----|
+| `@@ -0,0 +1,173 @@` | RIGHT | Line 80 of new file | `--line 80` |
+| `@@ -224,6 +224,112 @@` | RIGHT | Line 280 in the modified file | `--line 280` |
+| `@@ -50,7 +50,7 @@` | LEFT | Deleted line at old file line 53 | `--line 53 --side LEFT` |
 
 ### Common Mistakes
 
-❌ **Wrong**: Using absolute file line numbers
-❌ **Wrong**: Counting from the original file's line numbers
-❌ **Wrong**: Counting `-` lines (removed lines)
+❌ **Wrong**: Using a line number that falls outside any diff hunk range
+❌ **Wrong**: Confusing LEFT/RIGHT side — LEFT uses old file line numbers, RIGHT uses new file line numbers
 
-✅ **Correct**: Count only `+` lines from the start of the hunk
-✅ **Correct**: Each hunk restarts at position 1
+✅ **Correct**: Use the absolute line number as shown in the diff gutter
+✅ **Correct**: Verify the line falls within a hunk range using the `@@` header
 
-**Debug tip**: If you get "line number is invalid" error, your line number is outside the hunk range. Re-check the patch and count again.
+> **Note on LEFT side ranges**: When using `--start-line` / `--line` with `--side LEFT`, the GitHub diff view will include any interleaved RIGHT side additions that fall between your start and end lines. This is a GitHub rendering behavior, not a tool issue.
+
+**Debug tip**: If you get a "line number is invalid" error, verify the line falls within a hunk range. Use `gh api repos/OWNER/REPO/pulls/PR/files` to inspect the patch.
 
 Edit a comment in pending review (requires comment node ID PRRC_...):
 
@@ -267,10 +271,10 @@ Example output structure:
 4. **Filter by reviewer** when dealing with specific review feedback
 5. **Use `--tail 1`** to reduce output size by keeping only latest replies
 6. **Parse JSON output** instead of trying to scrape text
-7. **Always verify line numbers from patch** before adding inline comments
+7. **Verify line numbers fall within a diff hunk range** before adding inline comments
    - Use `gh api repos/OWNER/REPO/pulls/PR/files` to get patches
-   - Count only `+` lines in each diff hunk
-   - Remember: position restarts at 1 for each hunk
+   - Check the `@@ -oldStart,oldCount +newStart,newCount @@` header for valid ranges
+   - Use absolute file line numbers (RIGHT = new file, LEFT = old file)
 
 ## Common Workflows
 
@@ -288,18 +292,18 @@ gh pr-review review view --unresolved --not_outdated -R owner/repo --pr $(gh pr 
 
 ### Create Review with Inline Comments
 
-**Important**: Line numbers must be diff positions, not absolute file line numbers. See Line Number Calculation section above.
+Line numbers are **absolute file line numbers** (the same numbers shown in the diff gutter). They must fall within a diff hunk range.
 
 1. Start: `gh pr-review review --start -R owner/repo <pr>`
-2. **Get patch to verify line numbers**:
+2. **Verify line is within a diff hunk**:
    ```sh
    gh api repos/OWNER/REPO/pulls/PR/files --jq '.[] | select(.filename == "target/file.ts") | {filename, patch}'
    ```
-3. **Calculate the correct line number** from the diff hunk
-4. Add comments: `gh pr-review review --add-comment -R owner/repo <pr> --review-id <PRR_...> --path <file> --line <num> --body "..."`
-5. Edit comments (if needed): `gh pr-review review --edit-comment -R owner/repo <pr> --comment-id <PRRC_...> --body "Updated text"`
-6. Delete comments (if needed): `gh pr-review review --delete-comment -R owner/repo <pr> --comment-id <PRRC_...>`
-7. Submit: `gh pr-review review --submit -R owner/repo <pr> --review-id <PRR_...> --event REQUEST_CHANGES --body "Summary"`
+   Check the `@@ +newStart,newCount @@` header — valid range for RIGHT side is `newStart` to `newStart + newCount - 1`.
+3. Add comments: `gh pr-review review --add-comment -R owner/repo <pr> --review-id <PRR_...> --path <file> --line <num> --body "..."`
+4. Edit comments (if needed): `gh pr-review review --edit-comment -R owner/repo <pr> --comment-id <PRRC_...> --body "Updated text"`
+5. Delete comments (if needed): `gh pr-review review --delete-comment -R owner/repo <pr> --comment-id <PRRC_...>`
+6. Submit: `gh pr-review review --submit -R owner/repo <pr> --review-id <PRR_...> --event REQUEST_CHANGES --body "Summary"`
 
 ## Important Notes
 
