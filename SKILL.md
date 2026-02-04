@@ -116,6 +116,36 @@ gh pr-review review --add-comment \
 
 > **Note**: While `--line` alone works for single-line comments, using both `--start-line` and `--line` with the same value is recommended for clarity.
 
+**Tip: Using heredoc for multi-line comments with code blocks**
+
+When your comment contains code blocks or special characters, use a heredoc to avoid shell escaping issues:
+
+```bash
+gh pr-review review --add-comment \
+  --review-id <PRR_...> \
+  --path <file-path> \
+  --line <line-number> \
+  --body "$(cat <<'EOF'
+**Issue: Unstable React key**
+
+Using `index` as React key is problematic:
+
+```tsx
+// Before
+todos.map((todo, index) => <Todo key={index} />)
+
+// After
+todos.map((todo) => <Todo key={todo.id} />)
+```
+
+This causes unnecessary re-renders when list reorders.
+EOF
+)" \
+  -R owner/repo <pr-number>
+```
+
+The `<<'EOF'` syntax prevents variable expansion, preserving `$` and backticks literally.
+
 **Comment positioning parameters:**
 
 - `--line` (required) - The absolute line number in the file where the comment ends. For `RIGHT` side, this is the line number in the **modified** file. For `LEFT` side, this is the line number in the **original** file. The line must fall within a diff hunk range.
