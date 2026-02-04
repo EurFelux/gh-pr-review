@@ -3,3 +3,5 @@ bin/
 gh-pr-review
 *.log
 .DS_Store
+
+.issue
