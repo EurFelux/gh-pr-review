@@ -218,7 +218,7 @@ Preview pending review comments before submitting:
 gh pr-review review --preview -R owner/repo <pr-number>
 ```
 
-**Output:** Shows pending comments with code context (diff lines each comment is attached to), enabling quick verification before submission.
+**Output:** Shows pending comments with code context (diff lines each comment is attached to), including accurate LEFT/RIGHT side identification. The `code_context` field contains the actual diff lines, making it easy to verify each comment targets the correct code before submission.
 
 Submit the review:
 
