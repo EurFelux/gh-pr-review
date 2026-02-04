@@ -5,3 +5,4 @@ gh-pr-review
 .DS_Store
 
 .issue
+.claude/settings.local.json
