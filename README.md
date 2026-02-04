@@ -33,9 +33,9 @@ The quickest path from opening a pending review to resolving threads:
 1. **Install or upgrade the extension.**
 
    ```sh
-   gh extension install agynio/gh-pr-review
+   gh extension install EurFelux/gh-pr-review
    # Update an existing installation
-   gh extension upgrade agynio/gh-pr-review
+   gh extension upgrade EurFelux/gh-pr-review
    ```
 
 
@@ -208,12 +208,12 @@ Run it with either a combined selector or explicit flags:
 gh pr-review review view -R owner/repo --pr 3
 ```
 
-Install or upgrade to **v1.6.0 or newer** (GraphQL-only thread resolution and minimal comment replies):
+Install or upgrade:
 
 ```sh
-gh extension install agynio/gh-pr-review
+gh extension install EurFelux/gh-pr-review
 # Update an existing installation
-gh extension upgrade agynio/gh-pr-review
+gh extension upgrade EurFelux/gh-pr-review
 ```
 
 ### Command behavior
@@ -287,7 +287,7 @@ Each command binds to a single GitHub backend—there are no runtime fallbacks.
 ## Additional docs
 
 - [docs/USAGE.md](docs/USAGE.md) — Command-by-command inputs, outputs, and
-  examples for v1.6.0.
+  examples for v1.7.0.
 - [docs/SCHEMAS.md](docs/SCHEMAS.md) — JSON schemas for each structured
   response (optional fields omitted rather than set to null).
 - [docs/AGENTS.md](docs/AGENTS.md) — Agent-focused workflows, prompts, and
@@ -328,17 +328,17 @@ Each command binds to a single GitHub backend—there are no runtime fallbacks.
 To add gh-pr-review as a skill to your AI coding agent:
 
 ```sh
-npx skills add agynio/gh-pr-review
+npx skills add EurFelux/gh-pr-review
 ```
 
 Additional options:
 
 ```sh
 # Install to a specific agent
-npx skills add agynio/gh-pr-review -a claude-code
+npx skills add EurFelux/gh-pr-review -a claude-code
 
 # Install globally (available across all projects)
-npx skills add agynio/gh-pr-review -g
+npx skills add EurFelux/gh-pr-review -g
 ```
 
 This command will:
