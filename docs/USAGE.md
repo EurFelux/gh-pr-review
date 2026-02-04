@@ -232,8 +232,8 @@ gh pr-review review --submit \
 - **Inputs:**
   - Optional pull request selector argument.
   - `--repo` / `--pr` flags when not using the selector shorthand.
-- **Backend:** GitHub GraphQL `pullRequest.reviews` query + REST API for file
-  patches.
+- **Backend:** GitHub GraphQL `pullRequest.reviewThreads` query + REST API for
+  file patches.
 - **Output schema:**
 
 ```sh

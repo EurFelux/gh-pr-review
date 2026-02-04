@@ -354,7 +354,7 @@ Produced by `review --preview`.
           "items": {
             "type": "string"
           },
-          "description": "Lines of code from the diff patch that the comment is attached to"
+          "description": "Lines of code from the diff patch that the comment is attached to. Omitted when the thread is outdated (diff unavailable)."
         }
       },
       "additionalProperties": false
