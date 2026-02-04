@@ -275,7 +275,8 @@ func inferSideFromDiffHunk(diffHunk string) string {
 			continue
 		}
 		// Skip "\ No newline at end of file" (may have leading space)
-		if strings.TrimSpace(text)[0] == '\\' {
+		trimmed := strings.TrimSpace(text)
+		if len(trimmed) > 0 && trimmed[0] == '\\' {
 			continue
 		}
 		// Remember this content line
