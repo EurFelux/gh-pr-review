@@ -108,8 +108,8 @@ func (s *Service) Preview(pr resolver.Identity, commentID string) (*PreviewResul
 		}
 
 		// Extract code context from patch if available
-		if patch, ok := patches[thread.Path]; ok && !thread.IsOutdated {
-			context := s.extractCodeContext(patch, thread)
+		if _, ok := patches[thread.Path]; ok && !thread.IsOutdated {
+			context := s.extractCodeContext(thread)
 			preview.CodeContext = context
 		}
 
@@ -343,7 +343,7 @@ func (s *Service) fetchFilePatches(pr resolver.Identity) (map[string]string, err
 
 // extractCodeContext extracts the code lines from a patch for the given thread.
 // This is a simplified implementation that uses diffHunk from the comment.
-func (s *Service) extractCodeContext(patch string, thread threadInfo) []string {
+func (s *Service) extractCodeContext(thread threadInfo) []string {
 	if len(thread.Comments) == 0 {
 		return nil
 	}
@@ -416,19 +416,20 @@ func parseDiffHunk(diffHunk string, startLine, targetLine int, side string) []st
 		var content string
 		var shouldInclude bool
 
-		if line[0] == '+' {
+		switch line[0] {
+		case '+':
 			// Added line - only on RIGHT side
 			currentLine = newLine
 			content = "+" + line[1:]
 			shouldInclude = (side == "RIGHT")
 			newLine++
-		} else if line[0] == '-' {
+		case '-':
 			// Deleted line - only on LEFT side
 			currentLine = oldLine
 			content = "-" + line[1:]
 			shouldInclude = (side == "LEFT")
 			oldLine++
-		} else if line[0] == ' ' {
+		case ' ':
 			// Context line - on both sides
 			if side == "LEFT" {
 				currentLine = oldLine

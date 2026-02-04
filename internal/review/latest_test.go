@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agynio/gh-pr-review/internal/resolver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/agynio/gh-pr-review/internal/resolver"
 )
 
 func TestLatestSubmittedDefaultsToAuthenticatedReviewer(t *testing.T) {

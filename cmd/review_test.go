@@ -7,9 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agynio/gh-pr-review/internal/ghcli"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/agynio/gh-pr-review/internal/ghcli"
 )
 
 type obj = map[string]interface{}
@@ -521,7 +522,7 @@ func TestReviewPreviewCommand(t *testing.T) {
 		files := []obj{
 			{
 				"filename": "src/main.go",
-				"patch": "@@ -40,5 +40,5 @@ func example() {\n oldFunc()\n-new line\n+refactored line\n }",
+				"patch":    "@@ -40,5 +40,5 @@ func example() {\n oldFunc()\n-new line\n+refactored line\n }",
 			},
 		}
 		return assignJSON(result, files)

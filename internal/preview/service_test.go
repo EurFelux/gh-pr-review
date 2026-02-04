@@ -173,7 +173,7 @@ func TestExtractCodeContext(t *testing.T) {
 	// Create a mock service
 	s := &Service{}
 
-	result := s.extractCodeContext("", thread)
+	result := s.extractCodeContext(thread)
 	if len(result) != 1 {
 		t.Errorf("expected 1 line, got %d: %v", len(result), result)
 	}
@@ -186,8 +186,8 @@ func TestThreadInfo_LineSelection(t *testing.T) {
 	// Test LEFT side thread
 	leftThread := threadInfo{
 		DiffSide:          "LEFT",
-		Line:              0,  // Not used
-		StartLine:         0,  // Not used
+		Line:              0, // Not used
+		StartLine:         0, // Not used
 		OriginalLine:      10,
 		OriginalStartLine: 5,
 	}

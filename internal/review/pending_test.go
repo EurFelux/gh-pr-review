@@ -4,9 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agynio/gh-pr-review/internal/resolver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/agynio/gh-pr-review/internal/resolver"
 )
 
 func int64Ptr(v int64) *int64 { return &v }
