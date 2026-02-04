@@ -29,8 +29,6 @@ type CommentPreview struct {
 	Path        string   `json:"path"`
 	Line        int      `json:"line"`
 	StartLine   *int     `json:"start_line,omitempty"`
-	Side        string   `json:"side"`
-	StartSide   string   `json:"start_side,omitempty"`
 	Body        string   `json:"body"`
 	CodeContext []string `json:"code_context"`
 }
@@ -77,19 +75,20 @@ func (s *Service) Preview(pr resolver.Identity) (*PreviewResult, error) {
 			DatabaseID: c.DatabaseID,
 			Path:       c.Path,
 			Line:       c.Line,
-			Side:       c.Side,
 			Body:       c.Body,
 		}
 		if c.StartLine > 0 {
 			preview.StartLine = &c.StartLine
 		}
-		if c.StartSide != "" {
-			preview.StartSide = c.StartSide
-		}
 
-		// Try to resolve code context from patch
+			// Try to resolve code context from patch
+		// Determine side by checking the last line of diffHunk
+		// If it starts with '-', it's LEFT side (deleted line)
+		// Otherwise, it's RIGHT side (added or unchanged line)
 		if patch, ok := patches[c.Path]; ok {
-			preview.CodeContext = extractCodeContext(patch, c.Line, c.StartLine, c.Side)
+			side := inferSideFromDiffHunk(c.DiffHunk)
+			context := extractCodeContext(patch, c.Line, c.StartLine, side, c.OriginalLine, c.OriginalStartLine)
+			preview.CodeContext = context
 		}
 
 		comments = append(comments, preview)
@@ -119,35 +118,31 @@ type pendingReview struct {
 
 // pendingComment represents a comment in a pending review.
 type pendingComment struct {
-	ID           string
-	DatabaseID   int
-	Path         string
-	Line         int
-	StartLine    int
-	OriginalLine int
+	ID                string
+	DatabaseID        int
+	Path              string
+	Line              int
+	StartLine         int
+	OriginalLine      int
 	OriginalStartLine int
-	Side         string
-	StartSide    string
-	Body         string
-	DiffHunk     string
+	Body              string
+	DiffHunk          string
 }
 
 func (s *Service) currentViewer() (string, error) {
 	const query = `query { viewer { login } }`
 
 	var response struct {
-		Data struct {
-			Viewer struct {
-				Login string `json:"login"`
-			} `json:"viewer"`
-		} `json:"data"`
+		Viewer struct {
+			Login string `json:"login"`
+		} `json:"viewer"`
 	}
 
 	if err := s.API.GraphQL(query, nil, &response); err != nil {
 		return "", err
 	}
 
-	login := strings.TrimSpace(response.Data.Viewer.Login)
+	login := strings.TrimSpace(response.Viewer.Login)
 	if login == "" {
 		return "", errors.New("viewer login unavailable")
 	}
@@ -164,44 +159,40 @@ func (s *Service) fetchPendingReview(pr resolver.Identity, viewer string) (*pend
 	}
 
 	var response struct {
-		Data struct {
-			Repository *struct {
-				PullRequest *struct {
-					Reviews *struct {
-						Nodes []struct {
-							ID         string `json:"id"`
-							DatabaseID int    `json:"databaseId"`
-							State      string `json:"state"`
-							Author     *struct {
-								Login string `json:"login"`
-							} `json:"author"`
-							Comments struct {
-								Nodes []struct {
-									ID                string `json:"id"`
-									DatabaseID        int    `json:"databaseId"`
-									Path              string `json:"path"`
-									Line              int    `json:"line"`
-									StartLine         int    `json:"startLine"`
-									OriginalLine      int    `json:"originalLine"`
-									OriginalStartLine int    `json:"originalStartLine"`
-									Side              string `json:"side"`
-									StartSide         string `json:"startSide"`
-									Body              string `json:"body"`
-									DiffHunk          string `json:"diffHunk"`
-								} `json:"nodes"`
-							} `json:"comments"`
-						} `json:"nodes"`
-					} `json:"reviews"`
-				} `json:"pullRequest"`
-			} `json:"repository"`
-		} `json:"data"`
+		Repository *struct {
+			PullRequest *struct {
+				Reviews *struct {
+					Nodes []struct {
+						ID         string `json:"id"`
+						DatabaseID int    `json:"databaseId"`
+						State      string `json:"state"`
+						Author     *struct {
+							Login string `json:"login"`
+						} `json:"author"`
+						Comments struct {
+							Nodes []struct {
+								ID                string `json:"id"`
+								DatabaseID        int    `json:"databaseId"`
+								Path              string `json:"path"`
+								Line              int    `json:"line"`
+								StartLine         int    `json:"startLine"`
+								OriginalLine      int    `json:"originalLine"`
+								OriginalStartLine int    `json:"originalStartLine"`
+								Body              string `json:"body"`
+								DiffHunk          string `json:"diffHunk"`
+							} `json:"nodes"`
+						} `json:"comments"`
+					} `json:"nodes"`
+				} `json:"reviews"`
+			} `json:"pullRequest"`
+		} `json:"repository"`
 	}
 
 	if err := s.API.GraphQL(pendingReviewQuery, variables, &response); err != nil {
 		return nil, err
 	}
 
-	repo := response.Data.Repository
+	repo := response.Repository
 	if repo == nil || repo.PullRequest == nil || repo.PullRequest.Reviews == nil {
 		return nil, fmt.Errorf("pull request %s/%s#%d not found", pr.Owner, pr.Repo, pr.Number)
 	}
@@ -231,8 +222,6 @@ func (s *Service) fetchPendingReview(pr resolver.Identity, viewer string) (*pend
 				StartLine:         c.StartLine,
 				OriginalLine:      c.OriginalLine,
 				OriginalStartLine: c.OriginalStartLine,
-				Side:              c.Side,
-				StartSide:         c.StartSide,
 				Body:              c.Body,
 				DiffHunk:          c.DiffHunk,
 			}
@@ -269,28 +258,65 @@ func (s *Service) fetchFilePatches(pr resolver.Identity) (map[string]string, err
 // hunkHeaderRegex matches the hunk header line: @@ -start,count +start,count @@
 var hunkHeaderRegex = regexp.MustCompile(`^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
 
+// inferSideFromDiffHunk determines if a comment is on LEFT or RIGHT side
+// by examining the last line of diffHunk.
+// If the last content line starts with '-', it's LEFT side (deleted line).
+// Otherwise (starts with '+' or ' '), it's RIGHT side.
+func inferSideFromDiffHunk(diffHunk string) string {
+	if diffHunk == "" {
+		return "RIGHT" // default to RIGHT side
+	}
+	scanner := bufio.NewScanner(strings.NewReader(diffHunk))
+	var lastLine string
+	for scanner.Scan() {
+		text := scanner.Text()
+		// Skip hunk header
+		if hunkHeaderRegex.MatchString(text) {
+			continue
+		}
+		// Skip "\ No newline at end of file" (may have leading space)
+		if strings.TrimSpace(text)[0] == '\\' {
+			continue
+		}
+		// Remember this content line
+		lastLine = text
+	}
+	// Check the last content line
+	if len(lastLine) > 0 && lastLine[0] == '-' {
+		return "LEFT"
+	}
+	return "RIGHT"
+}
+
 // extractCodeContext extracts the code lines from a patch for the given line range.
-func extractCodeContext(patch string, line, startLine int, side string) []string {
+// side is "LEFT" or "RIGHT" indicating which side of the diff the comment is on.
+// For LEFT side, originalLine is used to find the line in the original file.
+// For RIGHT side, line is used to find the line in the new file.
+func extractCodeContext(patch string, line, startLine int, side string, originalLine, originalStartLine int) []string {
 	if patch == "" {
 		return nil
 	}
 
-	// Determine the target line in the new file (RIGHT side)
-	targetLine := line
-	if side == "LEFT" {
-		// For LEFT side, we'd need the original line number
-		// GitHub's diffHunk uses RIGHT side line numbers for context
+	// Determine which line numbers to use
+	var targetLine, start int
+	if side == "LEFT" && originalLine > 0 {
+		targetLine = originalLine
+		start = targetLine
+		if originalStartLine > 0 && originalStartLine < targetLine {
+			start = originalStartLine
+		}
+	} else {
 		targetLine = line
-	}
-
-	start := targetLine
-	if startLine > 0 && startLine < targetLine {
-		start = startLine
+		start = targetLine
+		if startLine > 0 && startLine < targetLine {
+			start = startLine
+		}
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(patch))
 	var context []string
-	currentLine := 0
+	newLine := 0   // line number in new file (RIGHT side)
+	oldLine := 0   // line number in old file (LEFT side)
 	inHunk := false
 
 	for scanner.Scan() {
@@ -299,8 +325,10 @@ func extractCodeContext(patch string, line, startLine int, side string) []string
 		// Check for hunk header
 		if matches := hunkHeaderRegex.FindStringSubmatch(text); matches != nil {
 			inHunk = true
+			oldStart, _ := strconv.Atoi(matches[1])
 			newStart, _ := strconv.Atoi(matches[2])
-			currentLine = newStart
+			oldLine = oldStart
+			newLine = newStart
 			continue
 		}
 
@@ -310,39 +338,57 @@ func extractCodeContext(patch string, line, startLine int, side string) []string
 
 		// Parse diff line
 		if len(text) == 0 {
-			// Empty line in context
-			if currentLine >= start && currentLine <= targetLine {
-				context = append(context, fmt.Sprintf("%d: %s", currentLine, text))
+			// Empty line in context - appears in both files
+			if side == "LEFT" {
+				if oldLine >= start && oldLine <= targetLine {
+					context = append(context, fmt.Sprintf("%d: %s", oldLine, text))
+				}
+			} else {
+				if newLine >= start && newLine <= targetLine {
+					context = append(context, fmt.Sprintf("%d: %s", newLine, text))
+				}
 			}
-			currentLine++
+			oldLine++
+			newLine++
 		} else if text[0] == '+' {
-			// Added line - count towards new file
-			if currentLine >= start && currentLine <= targetLine {
-				context = append(context, fmt.Sprintf("%d: +%s", currentLine, text[1:]))
+			// Added line - only in new file (RIGHT side)
+			if side != "LEFT" && newLine >= start && newLine <= targetLine {
+				context = append(context, fmt.Sprintf("%d: +%s", newLine, text[1:]))
 			}
-			currentLine++
+			newLine++
 		} else if text[0] == '-' {
-			// Deleted line - skip (not in new file)
-			continue
-		} else if text[0] == ' ' {
-			// Context line
-			if currentLine >= start && currentLine <= targetLine {
-				context = append(context, fmt.Sprintf("%d: %s", currentLine, text[1:]))
+			// Deleted line - only in old file (LEFT side)
+			if side == "LEFT" && oldLine >= start && oldLine <= targetLine {
+				context = append(context, fmt.Sprintf("%d: -%s", oldLine, text[1:]))
 			}
-			currentLine++
+			oldLine++
+		} else if text[0] == ' ' {
+			// Context line - appears in both files
+			if side == "LEFT" {
+				if oldLine >= start && oldLine <= targetLine {
+					context = append(context, fmt.Sprintf("%d: %s", oldLine, text[1:]))
+				}
+			} else {
+				if newLine >= start && newLine <= targetLine {
+					context = append(context, fmt.Sprintf("%d: %s", newLine, text[1:]))
+				}
+			}
+			oldLine++
+			newLine++
 		} else if text[0] == '\\' {
 			// "\ No newline at end of file" - skip
 			continue
-		} else {
-			// Other lines (like context without prefix in some formats)
-			if currentLine >= start && currentLine <= targetLine {
-				context = append(context, fmt.Sprintf("%d: %s", currentLine, text))
-			}
-			currentLine++
 		}
 
-		if currentLine > targetLine {
-			break
+		// Check if we've collected all lines we need
+		if side == "LEFT" {
+			if oldLine > targetLine {
+				break
+			}
+		} else {
+			if newLine > targetLine {
+				break
+			}
 		}
 	}
 

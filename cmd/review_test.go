@@ -471,36 +471,31 @@ func TestReviewPreviewCommand(t *testing.T) {
 		callCount++
 		switch callCount {
 		case 1:
-			// viewer query
+			// viewer query - ghcli.GraphQL extracts data field automatically
 			payload := obj{
-				"data": obj{
-					"viewer": obj{"login": "testuser"},
-				},
+				"viewer": obj{"login": "testuser"},
 			}
 			return assignJSON(result, payload)
 		case 2:
-			// pending review query
+			// pending review query - ghcli.GraphQL extracts data field automatically
 			payload := obj{
-				"data": obj{
-					"repository": obj{
-						"pullRequest": obj{
-							"reviews": obj{
-								"nodes": []obj{
-									{
-										"id":         "PRR_preview123",
-										"databaseId": 12345,
-										"state":      "PENDING",
-										"author":     obj{"login": "testuser"},
-										"comments": obj{
-											"nodes": []obj{
-												{
-													"id":         "PRRC_comment1",
-													"databaseId": 67890,
-													"path":       "src/main.go",
-													"line":       42,
-													"side":       "RIGHT",
-													"body":       "This needs refactoring",
-												},
+				"repository": obj{
+					"pullRequest": obj{
+						"reviews": obj{
+							"nodes": []obj{
+								{
+									"id":         "PRR_preview123",
+									"databaseId": 12345,
+									"state":      "PENDING",
+									"author":     obj{"login": "testuser"},
+									"comments": obj{
+										"nodes": []obj{
+											{
+												"id":         "PRRC_comment1",
+												"databaseId": 67890,
+												"path":       "src/main.go",
+												"line":       42,
+												"body":       "This needs refactoring",
 											},
 										},
 									},
@@ -555,7 +550,6 @@ func TestReviewPreviewCommand(t *testing.T) {
 	assert.Equal(t, "PRRC_comment1", firstComment["id"])
 	assert.Equal(t, "src/main.go", firstComment["path"])
 	assert.Equal(t, float64(42), firstComment["line"])
-	assert.Equal(t, "RIGHT", firstComment["side"])
 	assert.Equal(t, "This needs refactoring", firstComment["body"])
 }
 
@@ -565,24 +559,20 @@ func TestReviewPreviewCommandNoPendingReview(t *testing.T) {
 
 	fake := &commandFakeAPI{}
 	fake.graphqlFunc = func(query string, variables map[string]interface{}, result interface{}) error {
-		// viewer query
+		// viewer query - ghcli.GraphQL extracts data field automatically
 		if strings.Contains(query, "viewer") {
 			payload := obj{
-				"data": obj{
-					"viewer": obj{"login": "testuser"},
-				},
+				"viewer": obj{"login": "testuser"},
 			}
 			return assignJSON(result, payload)
 		}
 
-		// pending review query - empty result
+		// pending review query - empty result (ghcli.GraphQL extracts data field)
 		payload := obj{
-			"data": obj{
-				"repository": obj{
-					"pullRequest": obj{
-						"reviews": obj{
-							"nodes": []obj{},
-						},
+			"repository": obj{
+				"pullRequest": obj{
+					"reviews": obj{
+						"nodes": []obj{},
 					},
 				},
 			},

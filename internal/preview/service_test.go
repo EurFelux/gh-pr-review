@@ -6,12 +6,14 @@ import (
 
 func TestExtractCodeContext(t *testing.T) {
 	tests := []struct {
-		name      string
-		patch     string
-		line      int
-		startLine int
-		side      string
-		want      []string
+		name              string
+		patch             string
+		line              int
+		startLine         int
+		side              string
+		originalLine      int
+		originalStartLine int
+		want              []string
 	}{
 		{
 			name: "simple addition - single line",
@@ -48,13 +50,6 @@ func TestExtractCodeContext(t *testing.T) {
 		},
 		{
 			name: "context lines (space prefix)",
-			// @@ -20,5 +20,5 @@ means old starts at 20, new starts at 20
-			// After change, new file lines are:
-			// 20: context20 (context)
-			// 21: context21 (context)
-			// 22: new line (added)
-			// 23: context24 (context, was line 23 in old)
-			// 24: context25 (context, was line 24 in old)
 			patch: `@@ -20,5 +20,5 @@
  context20
  context21
@@ -80,14 +75,7 @@ func TestExtractCodeContext(t *testing.T) {
 			want:      nil,
 		},
 		{
-			name: "skip deleted lines",
-			// @@ -30,5 +30,4 @@: old starts at 30, count 5; new starts at 30, count 4
-			// Old file lines 30-34: line30, deleted1, deleted2, line33, line34
-			// New file lines 30-33: line30, line33, line34 (deletions removed)
-			// After mapping:
-			// 30: line30 (context)
-			// 31: line33 (context that was at old line 33)
-			// 32: line34 (context that was at old line 34)
+			name: "skip deleted lines on RIGHT side",
 			patch: `@@ -30,5 +30,4 @@
  line30
 -deleted1
@@ -121,12 +109,6 @@ func TestExtractCodeContext(t *testing.T) {
 		},
 		{
 			name: "no newline at end of file marker",
-			// @@ -1,4 +1,5 @@: old starts at 1, new starts at 1
-			// Lines in new file:
-			// 1: line1 (context)
-			// 2: line2 (context)
-			// 3: added line (added)
-			// 4: line4 (context, was at old line 3)
 			patch: `@@ -1,4 +1,5 @@
  line1
  line2
@@ -140,14 +122,6 @@ func TestExtractCodeContext(t *testing.T) {
 		},
 		{
 			name: "single line selection in range",
-			// @@ -100,10 +100,12 @@: old starts at 100, count 10; new starts at 100, count 12
-			// New file lines (with additions marked):
-			// 100: line100 (context)
-			// 101: line101 (context)
-			// 102: line102 (context)
-			// 103: +line102a (added)
-			// 104: +line102b (added)
-			// 105: line103 (context, was old line 103)
 			patch: `@@ -100,10 +100,12 @@
  line100
  line101
@@ -166,11 +140,84 @@ func TestExtractCodeContext(t *testing.T) {
 			side:      "RIGHT",
 			want:      []string{"105: line103"},
 		},
+		{
+			name: "multi-line range without additions",
+			patch: `@@ -50,7 +50,7 @@
+ line50
+ line51
+ line52
+ line53
+ line54
+ line55
+ line56`,
+			line:      54,
+			startLine: 52,
+			side:      "RIGHT",
+			want: []string{
+				"52: line52",
+				"53: line53",
+				"54: line54",
+			},
+		},
+		{
+			name: "multi-line range with additions",
+			patch: `@@ -200,5 +200,8 @@
+ line200
++added201
++added202
+ line201
+ line202
+ line203
+ line204`,
+			line:      203,
+			startLine: 201,
+			side:      "RIGHT",
+			want: []string{
+				"201: +added201",
+				"202: +added202",
+				"203: line201",
+			},
+		},
+		{
+			name: "LEFT side - show deleted line",
+			patch: `@@ -1,5 +1,4 @@
+ line1
+-deleted2
+-deleted3
++added_new
+ line4
+ line5`,
+			line:              0, // Not used for LEFT side
+			startLine:         0, // Not used for LEFT side
+			side:              "LEFT",
+			originalLine:      2,
+			originalStartLine: 0,
+			want:              []string{"2: -deleted2"},
+		},
+		{
+			name: "LEFT side - multi-line range",
+			patch: `@@ -1,5 +1,4 @@
+ line1
+-deleted2
+-deleted3
++added_new
+ line4
+ line5`,
+			line:              0, // Not used for LEFT side
+			startLine:         0, // Not used for LEFT side
+			side:              "LEFT",
+			originalLine:      3,
+			originalStartLine: 2,
+			want: []string{
+				"2: -deleted2",
+				"3: -deleted3",
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractCodeContext(tt.patch, tt.line, tt.startLine, tt.side)
+			got := extractCodeContext(tt.patch, tt.line, tt.startLine, tt.side, tt.originalLine, tt.originalStartLine)
 
 			if len(got) != len(tt.want) {
 				t.Errorf("extractCodeContext() got %d lines, want %d lines", len(got), len(tt.want))
@@ -197,8 +244,81 @@ func TestExtractCodeContext_EmptyResult(t *testing.T) {
  line3`
 
 	// Line 100 is outside the hunk range
-	result := extractCodeContext(patch, 100, 0, "RIGHT")
+	result := extractCodeContext(patch, 100, 0, "RIGHT", 0, 0)
 	if len(result) != 0 {
 		t.Errorf("expected empty result for out-of-range line, got %v", result)
+	}
+}
+
+func TestInferSideFromDiffHunk(t *testing.T) {
+	tests := []struct {
+		name     string
+		diffHunk string
+		want     string
+	}{
+		{
+			name: "RIGHT side - added line",
+			diffHunk: `@@ -1,5 +1,6 @@
+ line1
+ line2
++added line
+ line3
+ line4
+ line5`,
+			want: "RIGHT",
+		},
+		{
+			name: "LEFT side - deleted line",
+			diffHunk: `@@ -2,3 +2,2 @@
+ line1
+-deleted line`,
+			want: "LEFT",
+		},
+		{
+			name: "RIGHT side - context line",
+			diffHunk: `@@ -2,3 +2,3 @@
+ line1
+ context line`,
+			want: "RIGHT",
+		},
+		{
+			name:     "empty diffHunk",
+			diffHunk: "",
+			want:     "RIGHT",
+		},
+		{
+			name: "multiple hunks - last is LEFT",
+			diffHunk: `@@ -10,3 +10,2 @@
+ line10
+-deleted`,
+			want: "LEFT",
+		},
+		{
+			name: "with no newline marker - added line",
+			diffHunk: `@@ -1,5 +1,6 @@
+ line1
+ line2
++added line
+ \ No newline at end of file`,
+			want: "RIGHT",
+		},
+		{
+			name: "with no newline marker - deleted line",
+			diffHunk: `@@ -1,5 +1,4 @@
+ line1
+ line2
+-deleted line
+ \ No newline at end of file`,
+			want: "LEFT",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := inferSideFromDiffHunk(tt.diffHunk)
+			if got != tt.want {
+				t.Errorf("inferSideFromDiffHunk() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }

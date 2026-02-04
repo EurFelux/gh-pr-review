@@ -27,8 +27,6 @@ const pendingReviewQuery = `query PendingReviewWithComments(
               startLine
               originalLine
               originalStartLine
-              side
-              startSide
               body
               diffHunk
               commit {
