@@ -17,6 +17,7 @@ Use this skill when you need to:
 - Create and submit PR reviews with inline comments
 - Edit comments in pending reviews
 - Delete comments from pending reviews
+- Preview pending review comments with code context before submitting
 - Access PR review context for automated workflows
 - Filter reviews by state, reviewer, or resolution status
 
@@ -211,6 +212,14 @@ gh pr-review review --delete-comment \
   -R owner/repo <pr-number>
 ```
 
+Preview pending review comments before submitting:
+
+```sh
+gh pr-review review --preview -R owner/repo <pr-number>
+```
+
+**Output:** Shows pending comments with code context (diff lines each comment is attached to), enabling quick verification before submission.
+
 Submit the review:
 
 ```sh
@@ -275,6 +284,7 @@ Example output structure:
    - Use `gh api repos/OWNER/REPO/pulls/PR/files` to get patches
    - Check the `@@ -oldStart,oldCount +newStart,newCount @@` header for valid ranges
    - Use absolute file line numbers (RIGHT = new file, LEFT = old file)
+8. **Preview before submitting** (`--preview`) to verify comments target the correct code lines
 
 ## Common Workflows
 
@@ -303,7 +313,8 @@ Line numbers are **absolute file line numbers** (the same numbers shown in the d
 3. Add comments: `gh pr-review review --add-comment -R owner/repo <pr> --review-id <PRR_...> --path <file> --line <num> --body "..."`
 4. Edit comments (if needed): `gh pr-review review --edit-comment -R owner/repo <pr> --comment-id <PRRC_...> --body "Updated text"`
 5. Delete comments (if needed): `gh pr-review review --delete-comment -R owner/repo <pr> --comment-id <PRRC_...>`
-6. Submit: `gh pr-review review --submit -R owner/repo <pr> --review-id <PRR_...> --event REQUEST_CHANGES --body "Summary"`
+6. **Preview before submitting:** `gh pr-review review --preview -R owner/repo <pr>` — verify comments target the correct code lines
+7. Submit: `gh pr-review review --submit -R owner/repo <pr> --review-id <PRR_...> --event REQUEST_CHANGES --body "Summary"`
 
 ## Important Notes
 

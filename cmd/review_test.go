@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/agynio/gh-pr-review/internal/ghcli"
@@ -458,4 +459,145 @@ func TestReviewSubmitCommandHandlesGraphQLErrors(t *testing.T) {
 	first, ok := errorsField[0].(map[string]interface{})
 	require.True(t, ok)
 	assert.Equal(t, "mutation failed", first["message"])
+}
+
+func TestReviewPreviewCommand(t *testing.T) {
+	originalFactory := apiClientFactory
+	defer func() { apiClientFactory = originalFactory }()
+
+	fake := &commandFakeAPI{}
+	callCount := 0
+	fake.graphqlFunc = func(query string, variables map[string]interface{}, result interface{}) error {
+		callCount++
+		switch callCount {
+		case 1:
+			// viewer query
+			payload := obj{
+				"data": obj{
+					"viewer": obj{"login": "testuser"},
+				},
+			}
+			return assignJSON(result, payload)
+		case 2:
+			// pending review query
+			payload := obj{
+				"data": obj{
+					"repository": obj{
+						"pullRequest": obj{
+							"reviews": obj{
+								"nodes": []obj{
+									{
+										"id":         "PRR_preview123",
+										"databaseId": 12345,
+										"state":      "PENDING",
+										"author":     obj{"login": "testuser"},
+										"comments": obj{
+											"nodes": []obj{
+												{
+													"id":         "PRRC_comment1",
+													"databaseId": 67890,
+													"path":       "src/main.go",
+													"line":       42,
+													"side":       "RIGHT",
+													"body":       "This needs refactoring",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			return assignJSON(result, payload)
+		default:
+			return errors.New("unexpected graphql call")
+		}
+	}
+
+	fake.restFunc = func(method, path string, params map[string]string, body interface{}, result interface{}) error {
+		// Return file patches for code context
+		files := []obj{
+			{
+				"filename": "src/main.go",
+				"patch": "@@ -40,5 +40,5 @@ func example() {\n oldFunc()\n-new line\n+refactored line\n }",
+			},
+		}
+		return assignJSON(result, files)
+	}
+
+	apiClientFactory = func(host string) ghcli.API { return fake }
+
+	root := newRootCommand()
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	root.SetOut(stdout)
+	root.SetErr(stderr)
+	root.SetArgs([]string{"review", "--preview", "--repo", "octo/demo", "7"})
+
+	err := root.Execute()
+	require.NoError(t, err)
+	assert.Empty(t, stderr.String())
+
+	var payload map[string]interface{}
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &payload))
+	assert.Equal(t, "PRR_preview123", payload["review_id"])
+	assert.Equal(t, float64(12345), payload["database_id"])
+	assert.Equal(t, "PENDING", payload["state"])
+	assert.Equal(t, float64(1), payload["comments_count"])
+
+	comments, ok := payload["comments"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, comments, 1)
+
+	firstComment := comments[0].(map[string]interface{})
+	assert.Equal(t, "PRRC_comment1", firstComment["id"])
+	assert.Equal(t, "src/main.go", firstComment["path"])
+	assert.Equal(t, float64(42), firstComment["line"])
+	assert.Equal(t, "RIGHT", firstComment["side"])
+	assert.Equal(t, "This needs refactoring", firstComment["body"])
+}
+
+func TestReviewPreviewCommandNoPendingReview(t *testing.T) {
+	originalFactory := apiClientFactory
+	defer func() { apiClientFactory = originalFactory }()
+
+	fake := &commandFakeAPI{}
+	fake.graphqlFunc = func(query string, variables map[string]interface{}, result interface{}) error {
+		// viewer query
+		if strings.Contains(query, "viewer") {
+			payload := obj{
+				"data": obj{
+					"viewer": obj{"login": "testuser"},
+				},
+			}
+			return assignJSON(result, payload)
+		}
+
+		// pending review query - empty result
+		payload := obj{
+			"data": obj{
+				"repository": obj{
+					"pullRequest": obj{
+						"reviews": obj{
+							"nodes": []obj{},
+						},
+					},
+				},
+			},
+		}
+		return assignJSON(result, payload)
+	}
+
+	apiClientFactory = func(host string) ghcli.API { return fake }
+
+	root := newRootCommand()
+	root.SetOut(&bytes.Buffer{})
+	root.SetErr(&bytes.Buffer{})
+	root.SetArgs([]string{"review", "--preview", "--repo", "octo/demo", "7"})
+
+	err := root.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no pending review")
 }

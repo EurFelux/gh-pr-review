@@ -273,3 +273,92 @@ Returned by `threads resolve` and `threads unresolve`.
   "additionalProperties": false
 }
 ```
+
+## PreviewResult
+
+Produced by `review --preview`.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PreviewResult",
+  "type": "object",
+  "required": ["review_id", "database_id", "state", "comments_count", "comments"],
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "description": "GraphQL review node identifier (PRR_…)"
+    },
+    "database_id": {
+      "type": "integer",
+      "description": "REST API review identifier"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["PENDING"]
+    },
+    "comments_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "comments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CommentPreview"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "CommentPreview": {
+      "type": "object",
+      "required": ["id", "database_id", "path", "line", "side", "body", "code_context"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "GraphQL comment node identifier (PRRC_…)"
+        },
+        "database_id": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string",
+          "description": "File path relative to repository root"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Line number in the file (on the specified side)"
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Start line for multi-line comments"
+        },
+        "side": {
+          "type": "string",
+          "enum": ["LEFT", "RIGHT"],
+          "description": "Which side of the diff the comment is on"
+        },
+        "start_side": {
+          "type": "string",
+          "enum": ["LEFT", "RIGHT"],
+          "description": "Start side for multi-line comments"
+        },
+        "body": {
+          "type": "string",
+          "description": "Comment text"
+        },
+        "code_context": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Lines of code from the diff patch that the comment is attached to"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
+```
