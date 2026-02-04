@@ -29,11 +29,13 @@ This tool is particularly useful for:
 
 ## Installation
 
-First, ensure the extension is installed:
+Install the latest release directly from GitHub:
 
 ```sh
-gh extension install agynio/gh-pr-review
+gh extension install EurFelux/gh-pr-review
 ```
+
+Or download the pre-built binary for your platform from the [releases page](https://github.com/EurFelux/gh-pr-review/releases) and install manually.
 
 ## Core Commands
 
