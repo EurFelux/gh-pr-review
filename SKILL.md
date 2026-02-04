@@ -319,6 +319,40 @@ Example output structure:
 8. **Preview before submitting** (`--preview`) to verify comments target the correct code lines
 9. **After preview, verify `code_context` matches your target code** — The preview output includes `code_context` showing the actual lines each comment will attach to. Confirm these lines contain the code you intend to comment on before submitting. If there's a mismatch, adjust line numbers and re-preview.
 
+## Pre-Submission Checklist (MANDATORY)
+
+Before submitting the review, you MUST complete the following verification steps:
+
+### Step 1: Code Context Verification (Critical)
+After running `--preview`, for each comment verify:
+- [ ] The `code_context` contains the **actual code** you intended to comment on (NOT comments, NOT empty lines, NOT JSDoc)
+- [ ] If commenting on a function call, `code_context` shows the call, not the comment above it
+- [ ] If commenting on an assignment, `code_context` shows `x = y`, not `}` or `/**`
+
+**Example - Wrong vs Correct:**
+```json
+// ❌ WRONG - Comment attached to JSDoc
+{
+  "code_context": ["366:    * @param level - The log level to set"]
+}
+
+// ✅ CORRECT - Comment attached to implementation
+{
+  "code_context": ["369: +    this.consoleLevel = level", "370:     this.logger.level = level"]
+}
+```
+
+### Step 2: Intent Alignment Check
+- [ ] The comment body matches the code shown in `code_context`
+- [ ] If the comment says "this line does X", `code_context` actually shows that line
+- [ ] If any `code_context` is a comment or unrelated code, adjust line numbers and re-run `--preview`
+
+### Step 3: Final Verification
+- [ ] All comments have correct `code_context` aligned with target code
+- [ ] Only proceed with `--submit` after ALL comments pass verification
+
+**WARNING:** DO NOT submit if any comment has `code_context` pointing to JSDoc, empty lines, or incorrect code. Delete misplaced comments and re-add them on correct lines.
+
 ## Common Workflows
 
 ### Get Unresolved Comments for Current PR
