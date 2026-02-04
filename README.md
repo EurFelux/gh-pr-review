@@ -43,7 +43,7 @@ The quickest path from opening a pending review to resolving threads:
    node).
 
    ```sh
-   gh pr-review review --start -R owner/repo 42
+   gh pr-review review start -R owner/repo 42
 
    {
      "id": "PRR_kwDOAAABbcdEFG12",
@@ -54,11 +54,11 @@ The quickest path from opening a pending review to resolving threads:
    Pending reviews omit `submitted_at`; the field appears after submission.
 
 3. **Add inline comments with the pending review ID (GraphQL).** The
-   `review --add-comment` command fails fast if you supply a numeric ID instead
+   `review add-comment` command fails fast if you supply a numeric ID instead
    of the required `PRR_…` GraphQL identifier.
 
    ```sh
-   gh pr-review review --add-comment \
+   gh pr-review review add-comment \
      --review-id PRR_kwDOAAABbcdEFG12 \
      --path internal/service.go \
      --line 42 \
@@ -73,11 +73,11 @@ The quickest path from opening a pending review to resolving threads:
    }
    ```
 
-   **Edit comments before submission (optional).** Use `--edit-comment` with
+   **Edit comments before submission (optional).** Use `edit-comment` with
    a comment node ID (`PRRC_…`) and new `--body` to update a comment:
 
    ```sh
-   gh pr-review review --edit-comment \
+   gh pr-review review edit-comment \
      --comment-id PRRC_kwDOAAABbcdEFG12 \
      --body "Updated: use helper function here" \
      -R owner/repo 42
@@ -87,11 +87,11 @@ The quickest path from opening a pending review to resolving threads:
    }
    ```
 
-   **Delete comments before submission (optional).** Use `--delete-comment` with
+   **Delete comments before submission (optional).** Use `delete-comment` with
    a comment node ID (`PRRC_…`) to remove a comment from a pending review:
 
    ```sh
-   gh pr-review review --delete-comment \
+   gh pr-review review delete-comment \
      --comment-id PRRC_kwDOAAABbcdEFG12 \
      -R owner/repo 42
 
@@ -148,7 +148,7 @@ The quickest path from opening a pending review to resolving threads:
    troubleshooting.
 
    ```sh
-   gh pr-review review --submit \
+   gh pr-review review submit \
      --review-id PRR_kwDOAAABbcdEFG12 \
      --event REQUEST_CHANGES \
      --body "Please add tests" \
@@ -273,12 +273,12 @@ Each command binds to a single GitHub backend—there are no runtime fallbacks.
 
 | Command | Backend | Notes |
 | --- | --- | --- |
-| `review --start` | GraphQL | Opens a pending review via `addPullRequestReview`. |
-| `review --add-comment` | GraphQL | Requires a `PRR_…` review node ID. |
-| `review --edit-comment` | GraphQL | Updates a comment in a pending review via `updatePullRequestReviewComment`; requires a `PRRC_…` comment node ID and new `--body`. |
-| `review --delete-comment` | GraphQL | Deletes a comment from a pending review via `deletePullRequestReviewComment`; requires a `PRRC_…` comment node ID. |
+| `review start` | GraphQL | Opens a pending review via `addPullRequestReview`. |
+| `review add-comment` | GraphQL | Requires a `PRR_…` review node ID. |
+| `review edit-comment` | GraphQL | Updates a comment in a pending review via `updatePullRequestReviewComment`; requires a `PRRC_…` comment node ID and new `--body`. |
+| `review delete-comment` | GraphQL | Deletes a comment from a pending review via `deletePullRequestReviewComment`; requires a `PRRC_…` comment node ID. |
 | `review view` | GraphQL | Aggregates reviews, inline comments, and replies (used for thread IDs). |
-| `review --submit` | GraphQL | Finalizes a pending review via `submitPullRequestReview` using the `PRR_…` review node ID (executed through the internal `gh api graphql` wrapper). |
+| `review submit` | GraphQL | Finalizes a pending review via `submitPullRequestReview` using the `PRR_…` review node ID (executed through the internal `gh api graphql` wrapper). |
 | `comments reply` | GraphQL | Replies via `addPullRequestReviewThreadReply`; supply `--review-id` when responding from a pending review. |
 | `threads list` | GraphQL | Enumerates review threads for the pull request. |
 | `threads resolve` / `unresolve` | GraphQL | Mutates thread resolution via `resolveReviewThread` / `unresolveReviewThread`; supply GraphQL thread node IDs (`PRRT_…`). |
@@ -287,7 +287,7 @@ Each command binds to a single GitHub backend—there are no runtime fallbacks.
 ## Additional docs
 
 - [docs/USAGE.md](docs/USAGE.md) — Command-by-command inputs, outputs, and
-  examples for v1.7.0.
+  examples for v2.0.0.
 - [docs/SCHEMAS.md](docs/SCHEMAS.md) — JSON schemas for each structured
   response (optional fields omitted rather than set to null).
 - [docs/AGENTS.md](docs/AGENTS.md) — Agent-focused workflows, prompts, and

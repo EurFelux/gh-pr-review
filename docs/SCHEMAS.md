@@ -1,11 +1,11 @@
-# Output schemas (v1.6.0)
+# Output schemas (v2.0.0)
 
 Optional fields are omitted entirely (never serialized as `null`). Unless noted,
 schemas disallow additional properties to surface unexpected payload changes.
 
 ## ReviewState
 
-Used by `review --start` and `review --submit`.
+Used by `review start` and `review submit`.
 
 ```json
 {
@@ -34,7 +34,7 @@ Used by `review --start` and `review --submit`.
 
 ## ReviewThread
 
-Produced by `review --add-comment`.
+Produced by `review add-comment`.
 
 ```json
 {
@@ -276,7 +276,7 @@ Returned by `threads resolve` and `threads unresolve`.
 
 ## PreviewResult
 
-Produced by `review --preview`.
+Produced by `review preview`.
 
 ```json
 {

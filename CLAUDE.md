@@ -26,7 +26,7 @@ go build -o gh-pr-review ./
 
 Three-layer design: **CLI → Service → API**
 
-- **`cmd/`** — Cobra command definitions. Each command file (review.go, comments.go, threads.go) contains flag parsing and calls into service layer. `deps.go` holds a `apiClientFactory` function variable for dependency injection in tests.
+- **`cmd/`** — Cobra command definitions. All top-level commands (`review`, `comments`, `threads`) use the subcommand pattern. The `review` command is a container with subcommands: `start`, `add-comment`, `edit-comment`, `delete-comment`, `submit`, `preview`, `view` (each in its own `review_*.go` file). `deps.go` holds a `apiClientFactory` function variable for dependency injection in tests.
 - **`internal/`** — Service packages, each owning a domain:
   - `review/` — Start, add-comment, edit-comment, delete-comment, submit, pending/latest review operations
   - `comments/` — Reply to review threads

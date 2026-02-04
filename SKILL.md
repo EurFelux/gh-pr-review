@@ -87,13 +87,13 @@ gh pr-review threads resolve -R owner/repo <pr-number> --thread-id <PRRT_...>
 Start a pending review:
 
 ```sh
-gh pr-review review --start -R owner/repo <pr-number>
+gh pr-review review start -R owner/repo <pr-number>
 ```
 
 Add inline comment (recommended - explicit single line):
 
 ```sh
-gh pr-review review --add-comment \
+gh pr-review review add-comment \
   --review-id <PRR_...> \
   --path <file-path> \
   --start-line <line-number> \
@@ -105,7 +105,7 @@ gh pr-review review --add-comment \
 Add multi-line comment (range):
 
 ```sh
-gh pr-review review --add-comment \
+gh pr-review review add-comment \
   --review-id <PRR_...> \
   --path <file-path> \
   --start-line <start-line> \
@@ -123,7 +123,7 @@ gh pr-review review --add-comment \
 When your comment contains code blocks or special characters, use a heredoc to avoid shell escaping issues:
 
 ```bash
-gh pr-review review --add-comment \
+gh pr-review review add-comment \
   --review-id <PRR_...> \
   --path <file-path> \
   --line <line-number> \
@@ -230,7 +230,7 @@ To comment on the deleted import: Use `--line 53 --side LEFT`
 Edit a comment in pending review (requires comment node ID PRRC_...):
 
 ```sh
-gh pr-review review --edit-comment \
+gh pr-review review edit-comment \
   --comment-id <PRRC_...> \
   --body "Updated comment text" \
   -R owner/repo <pr-number>
@@ -239,7 +239,7 @@ gh pr-review review --edit-comment \
 Delete a comment from pending review (requires comment node ID PRRC_...):
 
 ```sh
-gh pr-review review --delete-comment \
+gh pr-review review delete-comment \
   --comment-id <PRRC_...> \
   -R owner/repo <pr-number>
 ```
@@ -247,7 +247,7 @@ gh pr-review review --delete-comment \
 Preview pending review comments before submitting:
 
 ```sh
-gh pr-review review --preview -R owner/repo <pr-number>
+gh pr-review review preview -R owner/repo <pr-number>
 ```
 
 **Output:** Shows pending comments with code context (diff lines each comment is attached to), including accurate LEFT/RIGHT side identification. The `code_context` field contains the actual diff lines.
@@ -257,7 +257,7 @@ gh pr-review review --preview -R owner/repo <pr-number>
 Submit the review:
 
 ```sh
-gh pr-review review --submit \
+gh pr-review review submit \
   --review-id <PRR_...> \
   --event <APPROVE|REQUEST_CHANGES|COMMENT> \
   --body "Overall review summary" \
@@ -318,7 +318,7 @@ Example output structure:
    - Use `gh api repos/OWNER/REPO/pulls/PR/files` to get patches
    - Check the `@@ -oldStart,oldCount +newStart,newCount @@` header for valid ranges
    - Use absolute file line numbers (RIGHT = new file, LEFT = old file)
-8. **Preview before submitting** (`--preview`) to verify comments target the correct code lines
+8. **Preview before submitting** (`review preview`) to verify comments target the correct code lines
 9. **After preview, verify `code_context` matches your target code** — The preview output includes `code_context` showing the actual lines each comment will attach to. Confirm these lines contain the code you intend to comment on before submitting. If there's a mismatch, adjust line numbers and re-preview.
 
 ## Pre-Submission Checklist (MANDATORY)
@@ -326,7 +326,7 @@ Example output structure:
 Before submitting the review, you MUST complete the following verification steps:
 
 ### Step 1: Code Context Verification (Critical)
-After running `--preview`, for each comment verify:
+After running `review preview`, for each comment verify:
 - [ ] The `code_context` contains the **actual code** you intended to comment on (NOT comments, NOT empty lines, NOT JSDoc)
 - [ ] If commenting on a function call, `code_context` shows the call, not the comment above it
 - [ ] If commenting on an assignment, `code_context` shows `x = y`, not `}` or `/**`
@@ -347,11 +347,11 @@ After running `--preview`, for each comment verify:
 ### Step 2: Intent Alignment Check
 - [ ] The comment body matches the code shown in `code_context`
 - [ ] If the comment says "this line does X", `code_context` actually shows that line
-- [ ] If any `code_context` is a comment or unrelated code, adjust line numbers and re-run `--preview`
+- [ ] If any `code_context` is a comment or unrelated code, adjust line numbers and re-run `review preview`
 
 ### Step 3: Final Verification
 - [ ] All comments have correct `code_context` aligned with target code
-- [ ] Only proceed with `--submit` after ALL comments pass verification
+- [ ] Only proceed with `review submit` after ALL comments pass verification
 
 **WARNING:** DO NOT submit if any comment has `code_context` pointing to JSDoc, empty lines, or incorrect code. Delete misplaced comments and re-add them on correct lines.
 
@@ -373,16 +373,16 @@ gh pr-review review view --unresolved --not_outdated -R owner/repo --pr $(gh pr 
 
 Line numbers are **absolute file line numbers** (the same numbers shown in the diff gutter). They must fall within a diff hunk range.
 
-1. Start: `gh pr-review review --start -R owner/repo <pr>`
+1. Start: `gh pr-review review start -R owner/repo <pr>`
 2. **Verify line is within a diff hunk**:
    ```sh
    gh api repos/OWNER/REPO/pulls/PR/files --jq '.[] | select(.filename == "target/file.ts") | {filename, patch}'
    ```
    Check the `@@ +newStart,newCount @@` header — valid range for RIGHT side is `newStart` to `newStart + newCount - 1`.
-3. Add comments: `gh pr-review review --add-comment -R owner/repo <pr> --review-id <PRR_...> --path <file> --line <num> --body "..."`
-4. Edit comments (if needed): `gh pr-review review --edit-comment -R owner/repo <pr> --comment-id <PRRC_...> --body "Updated text"`
-5. Delete comments (if needed): `gh pr-review review --delete-comment -R owner/repo <pr> --comment-id <PRRC_...>`
-6. **Preview before submitting:** `gh pr-review review --preview -R owner/repo <pr>` — verify comments target the correct code lines
+3. Add comments: `gh pr-review review add-comment -R owner/repo <pr> --review-id <PRR_...> --path <file> --line <num> --body "..."`
+4. Edit comments (if needed): `gh pr-review review edit-comment -R owner/repo <pr> --comment-id <PRRC_...> --body "Updated text"`
+5. Delete comments (if needed): `gh pr-review review delete-comment -R owner/repo <pr> --comment-id <PRRC_...>`
+6. **Preview before submitting:** `gh pr-review review preview -R owner/repo <pr>` — verify comments target the correct code lines
 
 7. **Verify code_context alignment:** Check the `code_context` field in preview output to ensure each comment is attached to the correct code:
    - The `code_context` shows the actual diff lines your comment will appear on
@@ -390,7 +390,7 @@ Line numbers are **absolute file line numbers** (the same numbers shown in the d
    - If there's a mismatch (e.g., you wanted line 48's `Promise.all` but `code_context` shows line 50's `)` ), adjust `--line`/`--start-line` and re-preview
    - Only proceed when all comments align with their target code
 
-8. Submit: `gh pr-review review --submit -R owner/repo <pr> --review-id <PRR_...> --event REQUEST_CHANGES --body "Summary"`
+8. Submit: `gh pr-review review submit -R owner/repo <pr> --review-id <PRR_...> --event REQUEST_CHANGES --body "Summary"`
 
 ## Important Notes
 

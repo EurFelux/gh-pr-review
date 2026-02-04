@@ -1,4 +1,4 @@
-# Usage reference (v1.6.0)
+# Usage reference (v2.0.0)
 
 All commands accept pull request selectors as either:
 
@@ -8,7 +8,7 @@ All commands accept pull request selectors as either:
 Unless stated otherwise, commands emit JSON only. Optional fields are omitted
 instead of serializing as `null`. Array responses default to `[]`.
 
-## review --start (GraphQL only)
+## review start (GraphQL only)
 
 - **Purpose:** Open (or resume) a pending review on the head commit.
 - **Inputs:**
@@ -21,7 +21,7 @@ instead of serializing as `null`. Array responses default to `[]`.
   `id` and `state`; optional `submitted_at`.
 
 ```sh
-gh pr-review review --start -R owner/repo 42
+gh pr-review review start -R owner/repo 42
 
 {
   "id": "PRR_kwDOAAABbcdEFG12",
@@ -29,7 +29,7 @@ gh pr-review review --start -R owner/repo 42
 }
 ```
 
-## review --add-comment (GraphQL only)
+## review add-comment (GraphQL only)
 
 - **Purpose:** Attach an inline thread to an existing pending review.
 - **Inputs:**
@@ -49,7 +49,7 @@ gh pr-review review --start -R owner/repo 42
 ```sh
 # Example: file modified at @@ -224,6 +224,112 @@
 # Valid line range: 224 to 335 (224 + 112 - 1)
-gh pr-review review --add-comment \
+gh pr-review review add-comment \
   --review-id PRR_kwDOAAABbcdEFG12 \
   --path internal/service.go \
   --line 280 \
@@ -91,7 +91,7 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/files \
 > the GitHub diff view will include any interleaved RIGHT side additions that fall
 > between your start and end lines. This is a GitHub rendering behavior, not a tool issue.
 
-## review --edit-comment (GraphQL only)
+## review edit-comment (GraphQL only)
 
 - **Purpose:** Edit/update the body of a comment in a pending review.
 - **Inputs:**
@@ -102,7 +102,7 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/files \
 - **Output schema:** Status payload `{"status": "Comment updated successfully"}`.
 
 ```sh
-gh pr-review review --edit-comment \
+gh pr-review review edit-comment \
   --comment-id PRRC_kwDOAAABbcdEFG12 \
   --body "Updated: use helper function here" \
   -R owner/repo 42
@@ -115,7 +115,7 @@ gh pr-review review --edit-comment \
 > **Note:** This only works on comments in **pending** reviews. Once a review is
 > submitted, comments cannot be edited via this API.
 
-## review --delete-comment (GraphQL only)
+## review delete-comment (GraphQL only)
 
 - **Purpose:** Delete a comment from a pending review.
 - **Inputs:**
@@ -125,7 +125,7 @@ gh pr-review review --edit-comment \
 - **Output schema:** Status payload `{"status": "Comment deleted successfully"}`.
 
 ```sh
-gh pr-review review --delete-comment \
+gh pr-review review delete-comment \
   --comment-id PRRC_kwDOAAABbcdEFG12 \
   -R owner/repo 42
 
@@ -184,7 +184,7 @@ The `thread_id` values surfaced in the report feed directly into
 comments and replies with GraphQL `comment_node_id` fields; those keys remain
 omitted otherwise.
 
-## review --submit (GraphQL only)
+## review submit (GraphQL only)
 
 - **Purpose:** Finalize a pending review as COMMENT, APPROVE, or
   REQUEST_CHANGES.
@@ -200,7 +200,7 @@ omitted otherwise.
   "errors": [...] }` and exits non-zero.
 
 ```sh
-gh pr-review review --submit \
+gh pr-review review submit \
   --review-id PRR_kwDOAAABbcdEFG12 \
   --event REQUEST_CHANGES \
   --body "Please cover edge cases" \
@@ -224,7 +224,7 @@ gh pr-review review --submit \
 > before mutating threads or
 > replying.
 
-## review --preview (GraphQL + REST)
+## review preview (GraphQL + REST)
 
 - **Purpose:** Preview pending review comments with code context before
   submitting. Shows the actual code lines that each comment is attached to,
@@ -237,7 +237,7 @@ gh pr-review review --submit \
 - **Output schema:**
 
 ```sh
-gh pr-review review --preview -R owner/repo 42
+gh pr-review review preview -R owner/repo 42
 
 {
   "review_id": "PRR_kwDOAAABbcdEFG12",
