@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/agynio/gh-pr-review/internal/preview"
 	"github.com/agynio/gh-pr-review/internal/resolver"
 	reviewsvc "github.com/agynio/gh-pr-review/internal/review"
 )
@@ -52,6 +53,7 @@ Get diff info: gh api repos/OWNER/REPO/pulls/PR/files --jq '.[].patch'`,
 	cmd.Flags().BoolVar(&opts.EditComment, "edit-comment", false, "Edit a comment in a pending review")
 	cmd.Flags().BoolVar(&opts.DeleteComment, "delete-comment", false, "Delete a comment from a pending review")
 	cmd.Flags().BoolVar(&opts.Submit, "submit", false, "Submit a pending review")
+	cmd.Flags().BoolVar(&opts.Preview, "preview", false, "Preview pending review comments with code context")
 
 	cmd.Flags().StringVar(&opts.Commit, "commit", "", "Commit SHA for review start (defaults to current head)")
 	cmd.Flags().StringVar(&opts.ReviewID, "review-id", "", "Review identifier (GraphQL review node ID)")
@@ -79,6 +81,7 @@ type reviewOptions struct {
 	EditComment   bool
 	DeleteComment bool
 	Submit        bool
+	Preview       bool
 
 	Commit    string
 	ReviewID  string
@@ -93,6 +96,11 @@ type reviewOptions struct {
 }
 
 func runReview(cmd *cobra.Command, opts *reviewOptions) error {
+	// Handle preview separately - it doesn't conflict with other actions
+	if opts.Preview {
+		return executeReviewPreview(cmd, opts)
+	}
+
 	actions := []bool{opts.Start, opts.AddComment, opts.EditComment, opts.DeleteComment, opts.Submit}
 	enabled := 0
 	for _, flag := range actions {
@@ -255,6 +263,27 @@ func executeReviewSubmit(cmd *cobra.Command, service *reviewsvc.Service, pr reso
 		return err
 	}
 	return errors.New("review submission failed")
+}
+
+func executeReviewPreview(cmd *cobra.Command, opts *reviewOptions) error {
+	selector, err := resolver.NormalizeSelector(opts.Selector, opts.Pull)
+	if err != nil {
+		return err
+	}
+
+	hostEnv := os.Getenv("GH_HOST")
+	identity, err := resolver.Resolve(selector, opts.Repo, hostEnv)
+	if err != nil {
+		return err
+	}
+
+	service := preview.NewService(apiClientFactory(identity.Host))
+	result, err := service.Preview(identity)
+	if err != nil {
+		return err
+	}
+
+	return encodeJSON(cmd, result)
 }
 
 func normalizeSide(side string) (string, error) {

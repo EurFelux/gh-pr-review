@@ -224,6 +224,60 @@ gh pr-review review --submit \
 > before mutating threads or
 > replying.
 
+## review --preview (GraphQL + REST)
+
+- **Purpose:** Preview pending review comments with code context before
+  submitting. Shows the actual code lines that each comment is attached to,
+  enabling quick visual verification.
+- **Inputs:**
+  - Optional pull request selector argument.
+  - `--repo` / `--pr` flags when not using the selector shorthand.
+- **Backend:** GitHub GraphQL `pullRequest.reviews` query + REST API for file
+  patches.
+- **Output schema:**
+
+```sh
+gh pr-review review --preview -R owner/repo 42
+
+{
+  "review_id": "PRR_kwDOAAABbcdEFG12",
+  "database_id": 1234567890,
+  "state": "PENDING",
+  "comments_count": 2,
+  "comments": [
+    {
+      "id": "PRRC_kwDOAAABbcdEFG12",
+      "database_id": 9876543210,
+      "path": "src/services/toolCallbacks.ts",
+      "line": 134,
+      "side": "RIGHT",
+      "body": "**Nit: merge order comment is misleading** ...",
+      "code_context": [
+        "128: +        // Merge order: toolResponse.arguments (base) -> ...",
+        "129: +        const mergedArguments = Object.assign(",
+        "130: +          {},",
+        "131: +          isPlainObject(toolResponse.arguments) ? ...",
+        "132: +          isPlainObject(existingResponse?.arguments) ? ...",
+        "133: +          isPlainObject(resolvedInput) ? resolvedInput : null",
+        "134: +        )"
+      ]
+    }
+  ]
+}
+```
+
+The `code_context` field shows the actual diff lines that each comment is
+attached to, making it easy to verify comments are targeting the correct code
+before submitting the review.
+
+**Use cases:**
+- **LLM agents:** Self-verify that inline comments target the correct code
+  before submitting.
+- **Human reviewers:** Double-check a complex multi-file review in the terminal
+  before hitting submit.
+- **CI/automation:** Validate programmatically-generated review comments before
+  submission.
+
 ## comments reply (GraphQL only)
 
 - **Purpose:** Reply to a review thread.
