@@ -227,7 +227,16 @@ To comment on the deleted import: Use `--line 53 --side LEFT`
 
 **Debug tip**: If you get a "line number is invalid" error, verify the line falls within a hunk range. Use `gh api repos/OWNER/REPO/pulls/PR/files` to inspect the patch.
 
-Edit a comment in pending review (requires comment node ID PRRC_...):
+Edit a submitted review body (requires review node ID PRR_...):
+
+```sh
+gh pr-review review edit \
+  --review-id <PRR_...> \
+  --body "Updated review body" \
+  -R owner/repo <pr-number>
+```
+
+Edit a review comment (requires comment node ID PRRC_...):
 
 ```sh
 gh pr-review review edit-comment \

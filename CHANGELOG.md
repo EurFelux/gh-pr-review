@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- Add `review edit` subcommand to update the body of a submitted review via `updatePullRequestReview` mutation.
+
+### Changed
+
+- `edit-comment` now works on comments in any review state, not just pending reviews.
+
 ### Fixed
 
 - Add `PENDING` to allowed review states in `review view --states` filter.

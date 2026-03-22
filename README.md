@@ -275,7 +275,8 @@ Each command binds to a single GitHub backend—there are no runtime fallbacks.
 | --- | --- | --- |
 | `review start` | GraphQL | Opens a pending review via `addPullRequestReview`. |
 | `review add-comment` | GraphQL | Requires a `PRR_…` review node ID. |
-| `review edit-comment` | GraphQL | Updates a comment in a pending review via `updatePullRequestReviewComment`; requires a `PRRC_…` comment node ID and new `--body`. |
+| `review edit` | GraphQL | Updates the body of a submitted review via `updatePullRequestReview`; requires a `PRR_…` review node ID and new `--body`. |
+| `review edit-comment` | GraphQL | Updates a review comment via `updatePullRequestReviewComment`; requires a `PRRC_…` comment node ID and new `--body`. |
 | `review delete-comment` | GraphQL | Deletes a comment from a pending review via `deletePullRequestReviewComment`; requires a `PRRC_…` comment node ID. |
 | `review view` | GraphQL | Aggregates reviews, inline comments, and replies (used for thread IDs). |
 | `review submit` | GraphQL | Finalizes a pending review via `submitPullRequestReview` using the `PRR_…` review node ID (executed through the internal `gh api graphql` wrapper). |

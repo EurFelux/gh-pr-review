@@ -25,7 +25,7 @@ func newReviewEditCommentCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "edit-comment [<number> | <url>]",
-		Short: "Edit a comment in a pending review",
+		Short: "Edit a review comment",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {

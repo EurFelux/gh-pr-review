@@ -91,9 +91,29 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/files \
 > the GitHub diff view will include any interleaved RIGHT side additions that fall
 > between your start and end lines. This is a GitHub rendering behavior, not a tool issue.
 
+## review edit (GraphQL only)
+
+- **Purpose:** Update the body text of a submitted pull request review.
+- **Inputs:**
+  - `--review-id` **(required):** GraphQL review node ID (must start with `PRR_`).
+  - `--body` **(required):** New review body text.
+- **Backend:** GitHub GraphQL `updatePullRequestReview` mutation.
+- **Output schema:** Status payload `{"status": "Review updated successfully"}`.
+
+```sh
+gh pr-review review edit \
+  --review-id PRR_kwDOAAABbcdEFG12 \
+  --body "Updated review summary" \
+  -R owner/repo 42
+
+{
+  "status": "Review updated successfully"
+}
+```
+
 ## review edit-comment (GraphQL only)
 
-- **Purpose:** Edit/update the body of a comment in a pending review.
+- **Purpose:** Edit/update the body of a review comment.
 - **Inputs:**
   - `--comment-id` **(required):** GraphQL comment node ID (must start with
     `PRRC_`).
@@ -111,9 +131,6 @@ gh pr-review review edit-comment \
   "status": "Comment updated successfully"
 }
 ```
-
-> **Note:** This only works on comments in **pending** reviews. Once a review is
-> submitted, comments cannot be edited via this API.
 
 ## review delete-comment (GraphQL only)
 

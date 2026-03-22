@@ -62,10 +62,16 @@ type DeleteCommentInput struct {
 	CommentID string
 }
 
-// UpdateCommentInput contains the payload for updating a comment in a pending review.
+// UpdateCommentInput contains the payload for updating a review comment.
 type UpdateCommentInput struct {
 	CommentID string
 	Body      string
+}
+
+// UpdateReviewInput contains the payload for updating a review body.
+type UpdateReviewInput struct {
+	ReviewID string
+	Body     string
 }
 
 // NewService constructs a review Service.
@@ -277,7 +283,7 @@ func (s *Service) DeleteComment(_ resolver.Identity, input DeleteCommentInput) e
 	return nil
 }
 
-// UpdateComment updates the body of a comment in a pending review.
+// UpdateComment updates the body of a review comment.
 func (s *Service) UpdateComment(_ resolver.Identity, input UpdateCommentInput) error {
 	commentID := strings.TrimSpace(input.CommentID)
 	if commentID == "" {
@@ -302,6 +308,42 @@ func (s *Service) UpdateComment(_ resolver.Identity, input UpdateCommentInput) e
 		"input": map[string]interface{}{
 			"pullRequestReviewCommentId": commentID,
 			"body":                       trimmedBody,
+		},
+	}
+
+	var resp struct{}
+	if err := s.API.GraphQL(mutation, variables, &resp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateReview updates the body of a submitted pull request review.
+func (s *Service) UpdateReview(_ resolver.Identity, input UpdateReviewInput) error {
+	reviewID := strings.TrimSpace(input.ReviewID)
+	if reviewID == "" {
+		return errors.New("review id is required")
+	}
+	if !strings.HasPrefix(reviewID, "PRR_") {
+		return fmt.Errorf("invalid review id %q: must be a GraphQL node id (PRR_...)", input.ReviewID)
+	}
+
+	trimmedBody := strings.TrimSpace(input.Body)
+	if trimmedBody == "" {
+		return errors.New("body is required")
+	}
+
+	const mutation = `mutation($input:UpdatePullRequestReviewInput!){
+  updatePullRequestReview(input:$input){
+    pullRequestReview { id }
+  }
+}`
+
+	variables := map[string]interface{}{
+		"input": map[string]interface{}{
+			"pullRequestReviewId": reviewID,
+			"body":                trimmedBody,
 		},
 	}
 

@@ -17,12 +17,13 @@ func newReviewCommand() *cobra.Command {
 			if err := cmd.Help(); err != nil {
 				return err
 			}
-			return errors.New("specify a subcommand: start, add-comment, edit-comment, delete-comment, submit, preview, or view")
+			return errors.New("specify a subcommand: start, add-comment, edit, edit-comment, delete-comment, submit, preview, or view")
 		},
 	}
 
 	cmd.AddCommand(newReviewStartCommand())
 	cmd.AddCommand(newReviewAddCommentCommand())
+	cmd.AddCommand(newReviewEditCommand())
 	cmd.AddCommand(newReviewEditCommentCommand())
 	cmd.AddCommand(newReviewDeleteCommentCommand())
 	cmd.AddCommand(newReviewSubmitCommand())
