@@ -53,6 +53,10 @@ Three-layer design: **CLI → Service → API**
 - Test fixtures live in `cmd/testdata/`
 - All tests run with `CGO_ENABLED=0`
 
+## Changelog
+
+This project maintains a `CHANGELOG.md` following the [Keep a Changelog](https://keepachangelog.com/) format. When making user-facing changes (features, fixes, breaking changes), add an entry under the `[Unreleased]` section. Purely internal changes (CI, docs, refactoring) do not need an entry unless they affect user workflow.
+
 ## Module Path
 
 The Go module path is `github.com/agynio/gh-pr-review` (note: this differs from the GitHub remote `EurFelux/gh-pr-review`).
