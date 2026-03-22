@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-03-22
+
 ### Added
 
 - Add `review edit` subcommand to update the body of a submitted review via `updatePullRequestReview` mutation.
@@ -39,7 +41,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **BREAKING:** Split `review` command from flags to subcommands (`start`, `add-comment`, `edit-comment`, `delete-comment`, `submit`, `preview`, `view`).
 
-[Unreleased]: https://github.com/EurFelux/gh-pr-review/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/EurFelux/gh-pr-review/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/EurFelux/gh-pr-review/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/EurFelux/gh-pr-review/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/EurFelux/gh-pr-review/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/EurFelux/gh-pr-review/compare/v1.7.0...v2.0.0
