@@ -93,7 +93,7 @@ Emitted by `review view`.
         },
         "state": {
           "type": "string",
-          "enum": ["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED"]
+          "enum": ["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"]
         },
         "body": {
           "type": "string"

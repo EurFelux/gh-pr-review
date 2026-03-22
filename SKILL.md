@@ -50,7 +50,7 @@ gh pr-review review view -R owner/repo --pr <number>
 **Useful filters:**
 - `--unresolved` - Only show unresolved threads
 - `--reviewer <login>` - Filter by specific reviewer
-- `--states <APPROVED|CHANGES_REQUESTED|COMMENTED|DISMISSED>` - Filter by review state
+- `--states <APPROVED|CHANGES_REQUESTED|COMMENTED|DISMISSED|PENDING>` - Filter by review state
 - `--tail <n>` - Keep only last n replies per thread
 - `--not_outdated` - Exclude outdated threads
 

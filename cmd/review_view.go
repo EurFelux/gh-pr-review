@@ -30,7 +30,7 @@ func newReviewViewCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Repo, "repo", "R", "", "Repository in 'owner/repo' format")
 	cmd.Flags().IntVar(&opts.Pull, "pr", 0, "Pull request number")
 	cmd.Flags().StringVar(&opts.Reviewer, "reviewer", "", "Filter to a specific reviewer (login)")
-	cmd.Flags().StringSliceVar(&opts.States, "states", nil, "Comma-separated review states (APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED)")
+	cmd.Flags().StringSliceVar(&opts.States, "states", nil, "Comma-separated review states (APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED, PENDING)")
 	cmd.Flags().BoolVar(&opts.Unresolved, "unresolved", false, "Only include unresolved threads")
 	cmd.Flags().BoolVar(&opts.NotOutdated, "not_outdated", false, "Exclude outdated threads")
 	cmd.Flags().IntVar(&opts.TailReplies, "tail", 0, "Limit to the last N replies per thread (0 = all)")
@@ -98,6 +98,7 @@ func parseStateFilters(raw []string) ([]report.State, bool, error) {
 		"CHANGES_REQUESTED": report.StateChangesRequested,
 		"COMMENTED":         report.StateCommented,
 		"DISMISSED":         report.StateDismissed,
+		"PENDING":           report.StatePending,
 	}
 	allowed := make([]string, 0, len(valid))
 	for key := range valid {

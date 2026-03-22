@@ -234,7 +234,7 @@ For the full canonical response structure, see docs/SCHEMAS.md.
 | Flag | Purpose |
 | --- | --- |
 | `--reviewer <login>` | Only include reviews authored by `<login>` (case-insensitive). |
-| `--states <list>` | Comma-separated review states (`APPROVED`, `CHANGES_REQUESTED`, `COMMENTED`, `DISMISSED`). |
+| `--states <list>` | Comma-separated review states (`APPROVED`, `CHANGES_REQUESTED`, `COMMENTED`, `DISMISSED`, `PENDING`). |
 | `--unresolved` | Keep only unresolved threads. |
 | `--not_outdated` | Exclude threads marked as outdated. |
 | `--tail <n>` | Retain only the last `n` replies per thread (0 = all). The parent inline comment is always kept; only replies are trimmed. |

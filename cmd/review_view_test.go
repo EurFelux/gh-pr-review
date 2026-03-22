@@ -90,6 +90,32 @@ func TestReviewViewCommandFiltersOutput(t *testing.T) {
 	}
 }
 
+func TestReviewViewCommandPendingState(t *testing.T) {
+	originalFactory := apiClientFactory
+	defer func() { apiClientFactory = originalFactory }()
+
+	fake := &fakeViewAPI{payload: viewResponse, t: t}
+	apiClientFactory = func(host string) ghcli.API { return fake }
+
+	root := newRootCommand()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(io.Discard)
+	root.SetArgs([]string{"review", "view", "--repo", "agyn/repo", "--states", "PENDING", "51"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("execute command: %v", err)
+	}
+
+	rawStates, ok := fake.variables["states"].([]string)
+	if !ok || len(rawStates) != 1 {
+		t.Fatalf("expected states variable with 1 entry, got %#v", fake.variables["states"])
+	}
+	if rawStates[0] != "PENDING" {
+		t.Fatalf("expected PENDING state, got %s", rawStates[0])
+	}
+}
+
 func TestReviewViewCommandInvalidState(t *testing.T) {
 	root := newRootCommand()
 	root.SetOut(io.Discard)
